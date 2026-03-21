@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "HeartSync",
+    "slug": "dating-app-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FF6B9D"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.heartsync.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "HeartSync needs camera access for video calls.",
+        "NSMicrophoneUsageDescription": "HeartSync needs microphone access for video calls.",
+        "NSPhotoLibraryUsageDescription": "HeartSync needs photo library access to upload profile photos."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FF6B9D",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.heartsync.app",
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-dev-client",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.9.25",
+            "extraProguardRules": ""
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "bb5347f5-b2d3-4dc7-8c72-7dccfb883c82"
+      }
+    },
+    "owner": "dauda933"
+  }
+}
