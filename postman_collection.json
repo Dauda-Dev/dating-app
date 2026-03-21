@@ -1,0 +1,291 @@
+{
+  "info": {
+    "name": "Dating App API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"user@example.com\",\"password\":\"password123\",\"firstName\":\"John\",\"lastName\":\"Doe\",\"dateOfBirth\":\"1990-01-15\",\"gender\":\"MALE\"}"
+            },
+            "url": {"raw": "http://localhost:3000/api/auth/signup", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "auth", "signup"]}
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"user@example.com\",\"password\":\"password123\"}"
+            },
+            "url": {"raw": "http://localhost:3000/api/auth/login", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "auth", "login"]}
+          }
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"token\":\"your_verification_token_here\"}"
+            },
+            "url": {"raw": "http://localhost:3000/api/auth/verify-email", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "auth", "verify-email"]}
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer your_jwt_token_here"}
+            ],
+            "url": {"raw": "http://localhost:3000/api/auth/me", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "auth", "me"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer your_jwt_token_here"}
+            ],
+            "url": {"raw": "http://localhost:3000/api/users/profile", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "users", "profile"]}
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer your_jwt_token_here"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"bio\":\"Looking for someone fun\",\"location\":\"New York\",\"interests\":[\"travel\",\"music\"],\"hobbies\":[\"hiking\",\"cooking\"],\"height\":\"5'10\",\"occupation\":\"Software Engineer\"}"
+            },
+            "url": {"raw": "http://localhost:3000/api/users/profile", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "users", "profile"]}
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer your_jwt_token_here"}
+            ],
+            "url": {"raw": "http://localhost:3000/api/users/user_id_here", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "users", "user_id_here"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Discovery",
+      "item": [
+        {
+          "name": "Get Eligible Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer your_jwt_token_here"}
+            ],
+            "url": {"raw": "http://localhost:3000/api/discovery/eligible?limit=20&offset=0", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "discovery", "eligible"], "query": [{"key": "limit", "value": "20"}, {"key": "offset", "value": "0"}]}
+          }
+        },
+        {
+          "name": "Like User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer your_jwt_token_here"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"toUserId\":\"target_user_id_here\"}"
+            },
+            "url": {"raw": "http://localhost:3000/api/discovery/like", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "discovery", "like"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Matches",
+      "item": [
+        {
+          "name": "Get Current Match",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer your_jwt_token_here"}
+            ],
+            "url": {"raw": "http://localhost:3000/api/matches/current", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "matches", "current"]}
+          }
+        },
+        {
+          "name": "Reject Match",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer your_jwt_token_here"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"matchId\":\"match_id_here\"}"
+            },
+            "url": {"raw": "http://localhost:3000/api/matches/reject", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "matches", "reject"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Video",
+      "item": [
+        {
+          "name": "Initialize Video Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer your_jwt_token_here"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"matchId\":\"match_id_here\",\"otherUserId\":\"other_user_id_here\"}"
+            },
+            "url": {"raw": "http://localhost:3000/api/video/initialize", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "video", "initialize"]}
+          }
+        },
+        {
+          "name": "Complete Video Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer your_jwt_token_here"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"durationSeconds\":240}"
+            },
+            "url": {"raw": "http://localhost:3000/api/video/sessions/session_id_here/complete", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "video", "sessions", "session_id_here", "complete"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dates",
+      "item": [
+        {
+          "name": "Propose Date",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer your_jwt_token_here"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"matchId\":\"match_id_here\",\"location\":\"Central Park Coffee\",\"proposedDateTime\":\"2026-02-14T19:00:00Z\"}"
+            },
+            "url": {"raw": "http://localhost:3000/api/dates/propose", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "dates", "propose"]}
+          }
+        },
+        {
+          "name": "Accept Date",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer your_jwt_token_here"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"matchId\":\"match_id_here\"}"
+            },
+            "url": {"raw": "http://localhost:3000/api/dates/accept", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "dates", "accept"]}
+          }
+        },
+        {
+          "name": "Complete Date",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer your_jwt_token_here"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"matchId\":\"match_id_here\"}"
+            },
+            "url": {"raw": "http://localhost:3000/api/dates/complete", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "dates", "complete"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Steals",
+      "item": [
+        {
+          "name": "Create Steal Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer your_jwt_token_here"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"targetUserId\":\"target_user_id_here\"}"
+            },
+            "url": {"raw": "http://localhost:3000/api/steals/request", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "steals", "request"]}
+          }
+        },
+        {
+          "name": "Accept Steal Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer your_jwt_token_here"}
+            ],
+            "url": {"raw": "http://localhost:3000/api/steals/requests/steal_request_id_here/accept", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "steals", "requests", "steal_request_id_here", "accept"]}
+          }
+        },
+        {
+          "name": "Get Pending Steal Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer your_jwt_token_here"}
+            ],
+            "url": {"raw": "http://localhost:3000/api/steals/pending", "protocol": "http", "host": ["localhost"], "port": ["3000"], "path": ["api", "steals", "pending"]}
+          }
+        }
+      ]
+    }
+  ]
+}
