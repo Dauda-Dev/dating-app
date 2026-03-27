@@ -28,6 +28,7 @@ export interface Profile {
   occupation?: string;
   education?: string;
   height?: number;
+  hotTakes?: string[];
   relationshipGoal?: 'casual' | 'serious' | 'friendship' | 'unsure';
   personality: PersonalityTraits;
   preferences: Preferences;
@@ -90,6 +91,7 @@ export interface DateProposal {
   id: string;
   matchId: string;
   proposerId: string;
+  proposedById?: string;
   proposedDate: string;
   location: string;
   venue: string;
@@ -157,6 +159,8 @@ export interface MatchState {
 
 export interface StealState {
   incomingRequests: StealRequest[];
+  sentRequests: StealRequest[];
   isLoading: boolean;
+  isSentLoading: boolean;
   error: string | null;
 }

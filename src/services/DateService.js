@@ -4,7 +4,7 @@ class DateService {
   /**
    * Propose date details (location and time)
    */
-  async proposeDateDetails(matchId, userId, location, proposedDateTime) {
+  async proposeDateDetails(matchId, userId, location, proposedDateTime, venue, message) {
     const match = await db.Match.findByPk(matchId);
 
     if (!match) {
@@ -18,7 +18,7 @@ class DateService {
       throw new Error('User is not part of this match');
     }
 
-    if (match.matchStatus !== 'VIDEO_COMPLETED') {
+    if (match.status !== 'video_call_completed') {
       throw new Error('Video call must be completed before proposing date');
     }
 
@@ -26,8 +26,12 @@ class DateService {
     await match.update({
       plannedDateLocation: location,
       plannedDateTime: proposedDateTime,
+      plannedVenue: venue || null,
+      proposedById: userId,
+      dateProposalMessage: message || null,
     });
 
+    await match.reload();
     return { success: true, match };
   }
 
@@ -60,11 +64,11 @@ class DateService {
       }
 
       await match.update(
-        { matchStatus: 'DATE_AGREED', dateAgreedAt: new Date() },
+        { status: 'date_accepted', dateAcceptedAt: new Date() },
         { transaction }
       );
 
-      // Update both users to DATE_ACCEPTED
+      // Update both users to date_accepted
       const user1 = await db.User.findByPk(match.user1Id, {
         transaction,
         lock: transaction.LOCK.UPDATE,
@@ -76,12 +80,12 @@ class DateService {
       });
 
       await user1.update(
-        { relationshipStatus: 'DATE_ACCEPTED' },
+        { relationshipStatus: 'date_accepted' },
         { transaction }
       );
       
       await user2.update(
-        { relationshipStatus: 'DATE_ACCEPTED' },
+        { relationshipStatus: 'date_accepted' },
         { transaction }
       );
 
@@ -114,7 +118,7 @@ class DateService {
 
       await match.update(
         {
-          matchStatus: 'COMPLETED',
+          status: 'post_date_open',
           dateCompletedAt: new Date(),
         },
         { transaction }
@@ -132,12 +136,12 @@ class DateService {
       });
 
       await user1.update(
-        { relationshipStatus: 'POST_DATE_OPEN' },
+        { relationshipStatus: 'post_date_open' },
         { transaction }
       );
       
       await user2.update(
-        { relationshipStatus: 'POST_DATE_OPEN' },
+        { relationshipStatus: 'post_date_open' },
         { transaction }
       );
 

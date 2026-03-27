@@ -49,11 +49,20 @@ export const API_ENDPOINTS = {
   COMPLETE_DATE: '/dates/complete',
   REQUEST_STEAL: '/steals/request',
   PENDING_STEALS: '/steals/pending',
+  SENT_STEALS: '/steals/sent',
+  ACCEPT_STEAL: '/steals',
+  REJECT_STEAL: '/steals',
+  CANCEL_STEAL: '/steals/requests',
+  RESEND_VERIFICATION: '/auth/resend-verification',
+  PAYMENT_PLANS: '/payments/plans',
+  PAYMENT_INITIALIZE: '/payments/initialize',
+  PAYMENT_VERIFY: '/payments/verify',
+  GOOGLE_MOBILE_AUTH: '/auth/google/mobile',
 };
 
 export const VIDEO_CONFIG = {
-  MIN_DURATION: 240,
-  WARNING_TIME: 30,
+  MIN_DURATION: 120,
+  WARNING_TIME: 20,
 };
 
 export const HOBBIES_OPTIONS = [

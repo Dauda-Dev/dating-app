@@ -74,9 +74,9 @@ export const proposeDate = createAsyncThunk(
 
 export const acceptDate = createAsyncThunk(
   'matches/acceptDate',
-  async (dateId: string, { rejectWithValue }) => {
+  async (matchId: string, { rejectWithValue }) => {
     try {
-      const response = await apiClient.acceptDate(dateId);
+      const response = await apiClient.acceptDate(matchId);
       return response;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to accept date');
@@ -92,6 +92,18 @@ export const rejectMatch = createAsyncThunk(
       return matchId;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to reject match');
+    }
+  }
+);
+
+export const completeDate = createAsyncThunk(
+  'matches/completeDate',
+  async (matchId: string, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.completeDate(matchId);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to mark date as complete');
     }
   }
 );
@@ -159,6 +171,12 @@ const matchSlice = createSlice({
         const matchId = action.payload;
         state.matches = state.matches.filter((m) => m.id !== matchId);
         if (state.currentMatch?.id === matchId) state.currentMatch = null;
+      })
+
+      .addCase(completeDate.fulfilled, (state) => {
+        if (state.currentMatch) {
+          state.currentMatch.status = 'post_date_open';
+        }
       });
   },
 });

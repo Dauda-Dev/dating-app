@@ -69,6 +69,31 @@ module.exports = (sequelize, DataTypes) => {
     compatibilityScore: {
       type: DataTypes.INTEGER,
       field: 'compatibility_score'
+    },
+    plannedDateTime: {
+      type: DataTypes.DATE,
+      field: 'planned_date_time',
+      allowNull: true
+    },
+    plannedDateLocation: {
+      type: DataTypes.STRING,
+      field: 'planned_date_location',
+      allowNull: true
+    },
+    plannedVenue: {
+      type: DataTypes.STRING,
+      field: 'planned_venue',
+      allowNull: true
+    },
+    proposedById: {
+      type: DataTypes.UUID,
+      field: 'proposed_by_id',
+      allowNull: true
+    },
+    dateProposalMessage: {
+      type: DataTypes.STRING,
+      field: 'date_proposal_message',
+      allowNull: true
     }
   }, {
     tableName: 'matches',

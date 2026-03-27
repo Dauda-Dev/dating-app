@@ -20,12 +20,16 @@ const matchRoutes = require('./routes/matches');
 const videoRoutes = require('./routes/video');
 const dateRoutes = require('./routes/dates');
 const stealRoutes = require('./routes/steals');
+const paymentRoutes = require('./routes/payments');
 
 const app = express();
 
 // Middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : '*',
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
@@ -71,6 +75,7 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/video', videoRoutes);
 app.use('/api/dates', dateRoutes);
 app.use('/api/steals', stealRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // 404
 app.use((req, res, next) => {

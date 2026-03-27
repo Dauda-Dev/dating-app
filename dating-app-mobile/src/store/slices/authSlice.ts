@@ -31,7 +31,12 @@ export const login = createAsyncThunk(
       await AsyncStorage.setItem('refreshToken', response.refreshToken);
       return response;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.error || error.response?.data?.message || 'Login failed');
+      const status = error.response?.status;
+      const message = error.response?.data?.error || error.response?.data?.message || 'Login failed';
+      if (status === 403) {
+        return rejectWithValue({ type: 'EMAIL_NOT_VERIFIED', email, message });
+      }
+      return rejectWithValue(message);
     }
   }
 );
@@ -94,6 +99,20 @@ export const updateProfile = createAsyncThunk(
   }
 );
 
+export const googleLogin = createAsyncThunk(
+  'auth/googleLogin',
+  async (idToken: string, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.googleMobileAuth(idToken);
+      await apiClient.setToken(response.token);
+      await AsyncStorage.setItem('refreshToken', response.refreshToken);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.error || error.response?.data?.message || 'Google sign-in failed');
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -119,7 +138,8 @@ const authSlice = createSlice({
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload as string;
+        const payload = action.payload as any;
+        state.error = typeof payload === 'string' ? payload : payload?.message || 'Login failed';
       })
 
       .addCase(signup.pending, (state) => { state.isLoading = true; state.error = null; })
@@ -151,6 +171,20 @@ const authSlice = createSlice({
 
       .addCase(logoutUser.fulfilled, (state) => {
         Object.assign(state, initialState);
+      })
+
+      .addCase(googleLogin.pending, (state) => { state.isLoading = true; state.error = null; })
+      .addCase(googleLogin.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.token = action.payload.token;
+        state.refreshToken = action.payload.refreshToken;
+        state.user = action.payload.user;
+        state.isAuthenticated = true;
+        state.needsOnboarding = computeNeedsOnboarding(action.payload.user);
+      })
+      .addCase(googleLogin.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
       })
 
       .addCase(updateProfile.fulfilled, (state, action) => {

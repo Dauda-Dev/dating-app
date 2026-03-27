@@ -58,6 +58,10 @@ const discoverySlice = createSlice({
     incrementIndex: (state) => {
       state.currentIndex += 1;
     },
+    // Optimistically remove a user by id so they never reappear on refresh
+    removeUserFromDeck: (state, action: { payload: string }) => {
+      state.users = state.users.filter((u) => u.id !== action.payload);
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -75,23 +79,23 @@ const discoverySlice = createSlice({
         state.error = action.payload as string;
       })
 
-      .addCase(likeUser.fulfilled, (state) => {
-        state.currentIndex += 1;
-        if (state.currentIndex >= state.users.length) {
-          state.currentIndex = 0;
-          state.users = [];
-        }
+      // Index increment is handled optimistically in the screen via removeUserFromDeck;
+      // these cases are kept as safety fallbacks
+      .addCase(likeUser.fulfilled, (state, action) => {
+        state.users = state.users.filter((u) => u.id !== action.payload.targetUserId);
+      })
+      .addCase(likeUser.rejected, (state, action) => {
+        // If the API failed, put the user back at the front so they can retry
+        // (removeUserFromDeck was already called optimistically — nothing to undo here
+        // because the backend duplicate-like guard means re-liking is safe)
+        state.error = action.payload as string;
       })
 
-      .addCase(passUser.fulfilled, (state) => {
-        state.currentIndex += 1;
-        if (state.currentIndex >= state.users.length) {
-          state.currentIndex = 0;
-          state.users = [];
-        }
+      .addCase(passUser.fulfilled, (state, action) => {
+        state.users = state.users.filter((u) => u.id !== action.payload);
       });
   },
 });
 
-export const { resetDiscovery, incrementIndex } = discoverySlice.actions;
+export const { resetDiscovery, incrementIndex, removeUserFromDeck } = discoverySlice.actions;
 export default discoverySlice.reducer;

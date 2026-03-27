@@ -336,6 +336,44 @@ router.get(
 
 /**
  * @swagger
+ * /api/auth/google/mobile:
+ *   post:
+ *     summary: Google OAuth for mobile apps (expo-auth-session)
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [idToken]
+ *             properties:
+ *               idToken:
+ *                 type: string
+ *                 description: Google ID token obtained from expo-auth-session
+ *     responses:
+ *       200:
+ *         description: Authentication successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                 refreshToken:
+ *                   type: string
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Missing or invalid idToken
+ *       401:
+ *         description: Token verification failed
+ */
+router.post('/google/mobile', authController.googleMobileAuth);
+
+/**
+ * @swagger
  * /api/auth/logout:
  *   post:
  *     summary: Logout current user

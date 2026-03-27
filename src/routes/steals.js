@@ -182,6 +182,8 @@ router.post('/requests/:id/reject', authenticateJWT, stealController.rejectReque
  *         $ref: '#/components/responses/UnauthorizedError'
  */
 router.get('/pending', authenticateJWT, stealController.pending);
+router.get('/sent', authenticateJWT, stealController.sent);
+router.delete('/requests/:id/cancel', authenticateJWT, stealController.cancelRequest);
 
 module.exports = router;
 

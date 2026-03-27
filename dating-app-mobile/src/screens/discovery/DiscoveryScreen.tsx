@@ -1,11 +1,12 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, Image, TouchableOpacity,
-  Animated, PanResponder, Dimensions, ActivityIndicator,
+  Animated, PanResponder, Dimensions, ActivityIndicator, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { fetchEligibleUsers, likeUser, passUser } from '../../store/slices/discoverySlice';
+import { fetchEligibleUsers, likeUser, passUser, removeUserFromDeck } from '../../store/slices/discoverySlice';
 import { requestSteal } from '../../store/slices/stealSlice';
 import { COLORS } from '../../constants';
 import { DiscoveryUser } from '../../types';
@@ -16,10 +17,14 @@ const SWIPE_THRESHOLD = SCREEN_W * 0.3;
 export const DiscoveryScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const { users, currentIndex, isLoading } = useAppSelector((s) => s.discovery);
+  const [photoIndex, setPhotoIndex] = useState(0);
 
-  useEffect(() => {
-    dispatch(fetchEligibleUsers());
-  }, []);
+  // Re-fetch every time this tab is focused so swiped users don't reappear
+  useFocusEffect(
+    useCallback(() => {
+      dispatch(fetchEligibleUsers());
+    }, [])
+  );
 
   const position = useRef(new Animated.ValueXY()).current;
 
@@ -40,26 +45,41 @@ export const DiscoveryScreen: React.FC = () => {
   });
 
   const swipeRight = () => {
+    const currentUser = users[currentIndex];
+    if (!currentUser) return;
+    setPhotoIndex(0);
+    // Optimistically remove from deck immediately — prevents reappearing on any refresh
+    dispatch(removeUserFromDeck(currentUser.id));
     Animated.timing(position, {
       toValue: { x: SCREEN_W + 100, y: 0 },
       duration: 250,
       useNativeDriver: true,
-    }).start(() => {
-      const currentUser = users[currentIndex];
-      if (currentUser) dispatch(likeUser(currentUser.id));
+    }).start(async () => {
       position.setValue({ x: 0, y: 0 });
+      const result = await dispatch(likeUser(currentUser.id));
+      if (likeUser.fulfilled.match(result) && result.payload.result?.matched) {
+        Alert.alert(
+          "🎉 It's a Match!",
+          `You and ${currentUser.firstName} liked each other! Go to Matches to start your journey.`,
+          [{ text: 'Awesome!', style: 'default' }]
+        );
+      }
     });
   };
 
   const swipeLeft = () => {
+    const currentUser = users[currentIndex];
+    if (!currentUser) return;
+    setPhotoIndex(0);
+    // Optimistically remove from deck immediately
+    dispatch(removeUserFromDeck(currentUser.id));
     Animated.timing(position, {
       toValue: { x: -(SCREEN_W + 100), y: 0 },
       duration: 250,
       useNativeDriver: true,
     }).start(() => {
-      const currentUser = users[currentIndex];
-      if (currentUser) dispatch(passUser(currentUser.id));
       position.setValue({ x: 0, y: 0 });
+      dispatch(passUser(currentUser.id));
     });
   };
 
@@ -124,13 +144,45 @@ export const DiscoveryScreen: React.FC = () => {
 
       {/* Current card */}
       <Animated.View style={[styles.card, cardStyle]} {...panResponder.panHandlers}>
-        {currentUser.profilePhoto ? (
-          <Image source={{ uri: currentUser.profilePhoto }} style={styles.cardImage} />
-        ) : (
-          <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
-            <Text style={{ fontSize: 80 }}>👤</Text>
-          </View>
-        )}
+        {(() => {
+          const allPhotos = [
+            ...(currentUser.profilePhoto ? [currentUser.profilePhoto] : []),
+            ...(currentUser.profile?.photos || []).filter(p => p !== currentUser.profilePhoto),
+          ];
+          const displayPhoto = allPhotos[photoIndex] || null;
+          return (
+            <>
+              {displayPhoto ? (
+                <Image source={{ uri: displayPhoto }} style={styles.cardImage} />
+              ) : (
+                <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
+                  <Text style={{ fontSize: 80 }}>👤</Text>
+                </View>
+              )}
+              {/* Tap zones: left = prev, right = next */}
+              {allPhotos.length > 1 && (
+                <>
+                  <TouchableOpacity
+                    style={styles.tapLeft}
+                    onPress={() => setPhotoIndex(i => Math.max(0, i - 1))}
+                    activeOpacity={1}
+                  />
+                  <TouchableOpacity
+                    style={styles.tapRight}
+                    onPress={() => setPhotoIndex(i => Math.min(allPhotos.length - 1, i + 1))}
+                    activeOpacity={1}
+                  />
+                  {/* Dot indicators */}
+                  <View style={styles.dotsRow}>
+                    {allPhotos.map((_, i) => (
+                      <View key={i} style={[styles.dot, i === photoIndex && styles.dotActive]} />
+                    ))}
+                  </View>
+                </>
+              )}
+            </>
+          );
+        })()}
 
         {/* Like / Nope overlays */}
         <Animated.View style={[styles.likeLabel, { opacity: likeOpacity }]}>
@@ -205,6 +257,17 @@ const styles = StyleSheet.create({
   },
   cardImage: { width: '100%', height: '100%' },
   cardImagePlaceholder: { backgroundColor: COLORS.lightGray, alignItems: 'center', justifyContent: 'center' },
+  tapLeft: { position: 'absolute', top: 0, left: 0, width: '40%', height: '80%' },
+  tapRight: { position: 'absolute', top: 0, right: 0, width: '40%', height: '80%' },
+  dotsRow: {
+    position: 'absolute', top: 10, left: 0, right: 0,
+    flexDirection: 'row', justifyContent: 'center', gap: 5,
+  },
+  dot: {
+    height: 3, flex: 1, maxWidth: 40, borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.45)',
+  },
+  dotActive: { backgroundColor: '#fff' },
   cardGradient: {
     position: 'absolute',
     bottom: 0,

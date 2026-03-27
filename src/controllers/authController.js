@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const axios = require('axios');
 const db = require('../config/database');
 const EmailService = require('../services/EmailService');
 const { generateToken, formatUserResponse, createError } = require('../utils/helpers');
@@ -165,6 +166,69 @@ module.exports = {
       // Redirect to frontend with token
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
       return res.redirect(`${frontendUrl}/auth/callback?token=${token}&userId=${user.id}`);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /**
+   * POST /api/auth/google/mobile
+   * Accepts a Google id_token from expo-auth-session, verifies it with Google,
+   * then finds or creates a user and returns a JWT directly (no redirect).
+   */
+  async googleMobileAuth(req, res, next) {
+    try {
+      const { idToken } = req.body;
+      if (!idToken) throw createError('idToken is required', 400);
+
+      // Verify id_token with Google
+      let googleData;
+      try {
+        const { data } = await axios.get(
+          `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`
+        );
+        googleData = data;
+      } catch {
+        throw createError('Invalid Google token', 401);
+      }
+
+      const { sub: googleId, email, given_name: firstName, family_name: lastName, picture } = googleData;
+
+      if (!email) throw createError('Google account has no email', 400);
+
+      // Check client_id matches (optional but secure)
+      const expectedClientId = process.env.GOOGLE_CLIENT_ID;
+      if (expectedClientId && googleData.aud !== expectedClientId) {
+        throw createError('Token audience mismatch', 401);
+      }
+
+      // Find or create user
+      let user = await db.User.findOne({ where: { email } });
+
+      if (!user) {
+        // New Google user — create account (no password, email pre-verified)
+        user = await db.User.create({
+          email,
+          firstName: firstName || 'User',
+          lastName: lastName || '',
+          googleId,
+          profilePhoto: picture || null,
+          isEmailVerified: true,
+          dateOfBirth: null,
+          gender: null,
+        });
+      } else if (!user.googleId) {
+        // Existing account — link Google ID
+        await user.update({ googleId, isEmailVerified: true });
+      }
+
+      await user.update({ lastLoginAt: new Date() });
+
+      const token = generateToken(user.id, user.email);
+      const refreshToken = EmailService.generateToken();
+      await user.update({ refreshToken });
+
+      return res.json({ token, refreshToken, user: formatUserResponse(user) });
     } catch (err) {
       next(err);
     }

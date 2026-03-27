@@ -6,10 +6,14 @@ module.exports = {
   async propose(req, res, next) {
     try {
       const userId = req.userId || req.user?.userId;
-      const { matchId, location, proposedDateTime } = req.body;
-      if (!matchId || !location || !proposedDateTime) return res.status(400).json({ error: 'matchId, location and proposedDateTime required' });
+      const { matchId, location, proposedDate: rawDate, venue, message } = req.body;
+      if (!matchId || !location || !rawDate) return res.status(400).json({ error: 'matchId, location and proposedDate required' });
 
-      const result = await DateService.proposeDateDetails(matchId, userId, location, proposedDateTime);
+      // Normalise "YYYY-MM-DD HH:MM" → "YYYY-MM-DDTHH:MM" so Date.parse works correctly
+      const proposedDate = String(rawDate).replace(' ', 'T');
+      if (isNaN(Date.parse(proposedDate))) return res.status(400).json({ error: 'Invalid date/time format. Use YYYY-MM-DD HH:MM' });
+
+      const result = await DateService.proposeDateDetails(matchId, userId, location, proposedDate, venue, message);
       
       // Send email to matched user
       try {

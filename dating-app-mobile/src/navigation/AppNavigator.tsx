@@ -9,7 +9,8 @@ import { LoadingScreen } from '../components/common/LoadingScreen';
 
 export const AppNavigator = () => {
   const dispatch = useAppDispatch();
-  const { isAuthenticated, needsOnboarding, isLoading, token } = useAppSelector((s) => s.auth);
+  const { isAuthenticated, needsOnboarding, token } = useAppSelector((s) => s.auth);
+  const [initializing, setInitializing] = React.useState(true);
 
   useEffect(() => {
     const init = async () => {
@@ -17,11 +18,12 @@ export const AppNavigator = () => {
       if (restoreAuth.fulfilled.match(result) && result.payload) {
         await dispatch(getMe());
       }
+      setInitializing(false);
     };
     init();
   }, [dispatch]);
 
-  if (isLoading) return <LoadingScreen message="Loading…" />;
+  if (initializing) return <LoadingScreen message="Loading…" />;
 
   if (!isAuthenticated) return <NavigationContainer><AuthNavigator /></NavigationContainer>;
   if (needsOnboarding) return <NavigationContainer><OnboardingNavigator /></NavigationContainer>;

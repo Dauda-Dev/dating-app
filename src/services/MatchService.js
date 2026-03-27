@@ -27,24 +27,24 @@ class MatchService {
 
       // Handle reject: just record it and bail out, no match check needed
       if (likeType === 'reject') {
-        await db.Like.create({
-          fromUserId,
-          toUserId,
-          likeType: 'reject',
-        }, { transaction });
+        // Upsert — avoid duplicate reject rows
+        await db.Like.findOrCreate({
+          where: { fromUserId, toUserId },
+          defaults: { fromUserId, toUserId, likeType: 'reject' },
+          transaction,
+        });
         await transaction.commit();
         return { matched: false, message: 'User rejected.' };
       }
 
-      // Validation: Both must be AVAILABLE for like/super_like
-      if (fromUser.relationshipStatus !== 'available') {
+      // Guard: if this user already liked the target, don't create duplicate
+      const existingLike = await db.Like.findOne({
+        where: { fromUserId, toUserId },
+        transaction,
+      });
+      if (existingLike) {
         await transaction.rollback();
-        return { matched: false, message: `User ${fromUserId} is not available for matching.` };
-      }
-      
-      if (toUser.relationshipStatus !== 'available') {
-        await transaction.rollback();
-        return { matched: false, message: `User ${toUserId} is not available for matching.` };
+        return { matched: false, message: 'Already liked.' };
       }
 
       // Check if mutual like exists (like or super_like from the other side)
@@ -134,7 +134,7 @@ class MatchService {
           include: [{
             model: db.Profile,
             as: 'profile',
-            attributes: ['bio', 'interests', 'hobbies', 'photos']
+            attributes: ['bio', 'interests', 'hobbies', 'photos', 'hotTakes']
           }]
         },
         {
@@ -144,7 +144,7 @@ class MatchService {
           include: [{
             model: db.Profile,
             as: 'profile',
-            attributes: ['bio', 'interests', 'hobbies', 'photos']
+            attributes: ['bio', 'interests', 'hobbies', 'photos', 'hotTakes']
           }]
         }
       ],
@@ -183,7 +183,7 @@ class MatchService {
           include: [{
             model: db.Profile,
             as: 'profile',
-            attributes: ['bio', 'location', 'interests', 'hobbies', 'photos']
+            attributes: ['bio', 'location', 'interests', 'hobbies', 'photos', 'hotTakes']
           }]
         },
         {
@@ -193,7 +193,7 @@ class MatchService {
           include: [{
             model: db.Profile,
             as: 'profile',
-            attributes: ['bio', 'location', 'interests', 'hobbies', 'photos']
+            attributes: ['bio', 'location', 'interests', 'hobbies', 'photos', 'hotTakes']
           }]
         }
       ]
@@ -291,7 +291,31 @@ class MatchService {
       ]
     });
 
-    return match;
+    if (!match) return null;
+
+    // Synthesize a dates array from the match's own proposal fields
+    // so the mobile app can find pendingDate / acceptedDate
+    const plain = match.toJSON();
+    plain.videoSession = plain.videoSessions?.[0] || null;
+
+    if (plain.plannedDateTime) {
+      const isAccepted = plain.status === 'date_accepted';
+      plain.dates = [{
+        id: plain.id,           // use match id as a stable key
+        matchId: plain.id,
+        proposedDate: plain.plannedDateTime,
+        location: plain.plannedDateLocation,
+        venue: plain.plannedVenue,
+        message: plain.dateProposalMessage,
+        proposerId: plain.proposedById,
+        proposedById: plain.proposedById,
+        status: isAccepted ? 'accepted' : 'pending',
+      }];
+    } else {
+      plain.dates = [];
+    }
+
+    return plain;
   }
 }
 

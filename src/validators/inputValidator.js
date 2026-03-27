@@ -44,7 +44,7 @@ const videoValidator = [
 const dateValidator = [
   body('matchId').notEmpty().isUUID(),
   body('location').notEmpty().trim(),
-  body('proposedDateTime').isISO8601().withMessage('Valid date/time required'),
+  body('proposedDate').notEmpty().withMessage('Valid date/time required'),
 ];
 
 const stealValidator = [

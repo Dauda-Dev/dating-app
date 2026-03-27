@@ -19,11 +19,11 @@ class StealService {
       throw new Error('Cannot steal yourself');
     }
 
-    if (requester.relationshipStatus !== 'AVAILABLE') {
+    if (requester.relationshipStatus !== 'available') {
       throw new Error('You must be AVAILABLE to request stealing');
     }
 
-    if (target.relationshipStatus !== 'POST_DATE_OPEN') {
+    if (target.relationshipStatus !== 'post_date_open') {
       throw new Error('Target user is not available for stealing');
     }
 
@@ -34,7 +34,7 @@ class StealService {
           { user1Id: targetUserId },
           { user2Id: targetUserId }
         ],
-        matchStatus: 'COMPLETED'
+        matchStatus: 'post_date_open'
       }
     });
 
@@ -66,7 +66,7 @@ class StealService {
         throw new Error('Steal request not found');
       }
 
-      if (stealRequest.status !== 'PENDING') {
+      if (stealRequest.status !== 'pending') {
         throw new Error('Steal request already processed');
       }
 
@@ -94,11 +94,11 @@ class StealService {
         throw new Error('One or both users not found');
       }
 
-      if (requester.relationshipStatus !== 'AVAILABLE') {
+      if (requester.relationshipStatus !== 'available') {
         throw new Error('Requester is no longer AVAILABLE');
       }
 
-      if (target.relationshipStatus !== 'POST_DATE_OPEN') {
+      if (target.relationshipStatus !== 'post_date_open') {
         throw new Error('Target user is no longer available for stealing');
       }
 
@@ -129,7 +129,7 @@ class StealService {
       // Delete old match and reset old partner to AVAILABLE
       await oldMatch.destroy({ transaction });
       await oldPartner.update(
-        { relationshipStatus: 'AVAILABLE' },
+        { relationshipStatus: 'available' },
         { transaction }
       );
 
@@ -137,27 +137,40 @@ class StealService {
       const newMatch = await db.Match.create({
         user1Id: stealRequest.requesterId,
         user2Id: stealRequest.targetUserId,
-        matchStatus: 'LOCKED',
+        status: 'matched_locked',
       }, { transaction });
 
       // Update both users in new match
       await requester.update(
-        { relationshipStatus: 'MATCHED_LOCKED' },
+        { relationshipStatus: 'matched_locked' },
         { transaction }
       );
 
       await target.update(
-        { relationshipStatus: 'MATCHED_LOCKED' },
+        { relationshipStatus: 'matched_locked' },
         { transaction }
       );
 
       // Mark steal request as accepted
       await stealRequest.update(
         {
-          status: 'ACCEPTED',
+          status: 'accepted',
           respondedAt: new Date(),
         },
         { transaction }
+      );
+
+      // Auto-reject all other pending steals targeting the same user
+      await db.StealRequest.update(
+        { status: 'rejected', respondedAt: new Date() },
+        {
+          where: {
+            targetUserId: stealRequest.targetUserId,
+            status: 'pending',
+            id: { [Op.ne]: stealRequest.id },
+          },
+          transaction,
+        }
       );
 
       await transaction.commit();
@@ -184,7 +197,7 @@ class StealService {
       throw new Error('Steal request not found');
     }
 
-    if (stealRequest.status !== 'PENDING') {
+    if (stealRequest.status !== 'pending') {
       throw new Error('Steal request already processed');
     }
 
@@ -193,7 +206,7 @@ class StealService {
     }
 
     await stealRequest.update({
-      status: 'REJECTED',
+      status: 'rejected',
       respondedAt: new Date(),
     });
 
@@ -207,14 +220,14 @@ class StealService {
     const requests = await db.StealRequest.findAll({
       where: {
         targetUserId: userId,
-        status: 'PENDING',
+        status: 'pending',
         expiresAt: { [Op.gt]: new Date() }
       },
       include: [
         {
           model: db.User,
           as: 'Requester',
-          attributes: ['id', 'firstName', 'lastName', 'profilePictureUrl', 'gender', 'dateOfBirth'],
+          attributes: ['id', 'firstName', 'lastName', 'profilePhoto', 'gender', 'dateOfBirth'],
           include: [{
             model: db.Profile,
             as: 'profile',
@@ -225,6 +238,29 @@ class StealService {
       order: [['createdAt', 'DESC']]
     });
 
+    return requests;
+  }
+
+  /**
+   * Get steal requests sent BY a user
+   */
+  async getSentStealRequests(userId) {
+    const requests = await db.StealRequest.findAll({
+      where: { requesterId: userId },
+      include: [
+        {
+          model: db.User,
+          as: 'Target',
+          attributes: ['id', 'firstName', 'lastName', 'profilePhoto'],
+          include: [{
+            model: db.Profile,
+            as: 'profile',
+            attributes: ['bio', 'location']
+          }]
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
     return requests;
   }
 
@@ -243,12 +279,12 @@ class StealService {
         {
           model: db.User,
           as: 'Requester',
-          attributes: ['id', 'firstName', 'lastName', 'profilePictureUrl']
+          attributes: ['id', 'firstName', 'lastName', 'profilePhoto']
         },
         {
           model: db.User,
           as: 'Target',
-          attributes: ['id', 'firstName', 'lastName', 'profilePictureUrl']
+          attributes: ['id', 'firstName', 'lastName', 'profilePhoto']
         }
       ],
       limit,

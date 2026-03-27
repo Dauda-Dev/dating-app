@@ -61,5 +61,30 @@ module.exports = {
     } catch (err) {
       next(err);
     }
+  },
+
+  async sent(req, res, next) {
+    try {
+      const userId = req.userId || req.user?.userId;
+      const requests = await StealService.getSentStealRequests(userId);
+      return res.json({ requests });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async cancelRequest(req, res, next) {
+    try {
+      const userId = req.userId || req.user?.userId;
+      const { id } = req.params;
+      const stealRequest = await require('../config/database').StealRequest.findByPk(id);
+      if (!stealRequest) return res.status(404).json({ error: 'Steal request not found' });
+      if (stealRequest.requesterId !== userId) return res.status(403).json({ error: 'Not your request' });
+      if (stealRequest.status !== 'pending') return res.status(400).json({ error: 'Request already processed' });
+      await stealRequest.update({ status: 'rejected', respondedAt: new Date() });
+      return res.json({ success: true, message: 'Steal request cancelled' });
+    } catch (err) {
+      next(err);
+    }
   }
 };

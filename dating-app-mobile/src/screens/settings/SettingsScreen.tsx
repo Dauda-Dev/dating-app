@@ -62,7 +62,7 @@ export const SettingsScreen: React.FC = () => {
             icon={user?.subscriptionTier === 'gold' ? '🥇' : user?.subscriptionTier === 'premium' ? '⭐' : '🆓'}
             label={`Current plan: ${user?.subscriptionTier || 'free'}`}
           />
-          <SettingRow icon="💳" label="Upgrade Plan" onPress={() => Alert.alert('Coming soon')} />
+          <SettingRow icon="💳" label="Upgrade Plan" onPress={() => (navigation as any).navigate('Subscription')} />
         </View>
 
         <Text style={styles.section}>Support</Text>

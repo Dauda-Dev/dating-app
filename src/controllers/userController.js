@@ -43,7 +43,8 @@ module.exports = {
         occupation,
         zodiacSign,
         personalityTraits,
-        photos
+        photos,
+      hotTakes
       } = req.body;
 
       let profile = await db.Profile.findOne({ where: { userId } });
@@ -61,11 +62,18 @@ module.exports = {
       if (ageRangeMin !== undefined || ageRangeMax !== undefined) {
         updateData.ageRange = { min: ageRangeMin || 18, max: ageRangeMax || 50 };
       }
-      if (education !== undefined) updateData.education = education;
+      const VALID_EDUCATION = ['high_school', 'some_college', 'bachelors', 'masters', 'phd'];
+      if (education !== undefined) updateData.education = VALID_EDUCATION.includes(education) ? education : null;
       if (occupation !== undefined) updateData.occupation = occupation;
       if (zodiacSign !== undefined) updateData.zodiacSign = zodiacSign;
       if (personalityTraits !== undefined) updateData.personalityTraits = personalityTraits;
       if (photos !== undefined) updateData.photos = photos;
+      if (hotTakes !== undefined) {
+        // Validate: max 5 hot takes, each max 120 chars
+        if (Array.isArray(hotTakes)) {
+          updateData.hotTakes = hotTakes.slice(0, 5).map(t => String(t).slice(0, 120).trim()).filter(Boolean);
+        }
+      }
 
       await profile.update(updateData);
 

@@ -120,7 +120,7 @@ class VideoService {
             sessionId: existingSession.id,
             roomUrl: existingSession.dailyRoomUrl,
             token: userToken,
-            minDurationSeconds: parseInt(process.env.VIDEO_CALL_MIN_DURATION) || 240,
+            minDurationSeconds: parseInt(process.env.VIDEO_CALL_MIN_DURATION) || 120,
             maxDurationSeconds: parseInt(process.env.VIDEO_CALL_MAX_DURATION) || 600,
             isExistingSession: true,
           };
@@ -160,7 +160,7 @@ class VideoService {
         sessionId: videoSession.id,
         roomUrl: room.url,
         token: userToken,
-        minDurationSeconds: parseInt(process.env.VIDEO_CALL_MIN_DURATION) || 240,
+        minDurationSeconds: parseInt(process.env.VIDEO_CALL_MIN_DURATION) || 120,
         maxDurationSeconds: parseInt(process.env.VIDEO_CALL_MAX_DURATION) || 600,
       };
 
@@ -181,7 +181,6 @@ class VideoService {
       const session = await db.VideoSession.findByPk(sessionId, {
         transaction,
         lock: transaction.LOCK.UPDATE,
-        include: [{ model: db.Match, as: 'match' }]
       });
 
       if (!session) {
@@ -192,7 +191,7 @@ class VideoService {
         throw new Error('Video session already completed');
       }
 
-      const minDuration = parseInt(process.env.VIDEO_CALL_MIN_DURATION) || 240;
+      const minDuration = parseInt(process.env.VIDEO_CALL_MIN_DURATION) || 120;
       const maxDuration = parseInt(process.env.VIDEO_CALL_MAX_DURATION) || 600;
       
       // Enforce duration bounds

@@ -81,7 +81,7 @@ class ApiClient {
   }
 
   async resendVerification(email: string) {
-    const r = await this.client.post('/auth/resend-verification', { email });
+    const r = await this.client.post(API_ENDPOINTS.RESEND_VERIFICATION, { email });
     return r.data;
   }
 
@@ -174,13 +174,13 @@ class ApiClient {
     return r.data;
   }
 
-  async acceptDate(dateId: string) {
-    const r = await this.client.post(API_ENDPOINTS.ACCEPT_DATE, { dateId });
+  async acceptDate(matchId: string) {
+    const r = await this.client.post(API_ENDPOINTS.ACCEPT_DATE, { matchId });
     return r.data;
   }
 
-  async completeDate(dateId: string, rating: number, feedback?: string) {
-    const r = await this.client.post(API_ENDPOINTS.COMPLETE_DATE, { dateId, rating, feedback });
+  async completeDate(matchId: string) {
+    const r = await this.client.post(API_ENDPOINTS.COMPLETE_DATE, { matchId });
     return r.data;
   }
 
@@ -192,6 +192,47 @@ class ApiClient {
 
   async getPendingSteals() {
     const r = await this.client.get(API_ENDPOINTS.PENDING_STEALS);
+    return r.data;
+  }
+
+  async getSentSteals() {
+    const r = await this.client.get(API_ENDPOINTS.SENT_STEALS);
+    return r.data;
+  }
+
+  async acceptSteal(stealId: string) {
+    const r = await this.client.post(`${API_ENDPOINTS.ACCEPT_STEAL}/${stealId}/accept`);
+    return r.data;
+  }
+
+  async rejectSteal(stealId: string) {
+    const r = await this.client.post(`${API_ENDPOINTS.REJECT_STEAL}/${stealId}/reject`);
+    return r.data;
+  }
+
+  async cancelSteal(stealId: string) {
+    const r = await this.client.delete(`${API_ENDPOINTS.CANCEL_STEAL}/${stealId}/cancel`);
+    return r.data;
+  }
+
+  // ── Payments ──────────────────────────────────────────────────────────────
+  async getSubscriptionPlans() {
+    const r = await this.client.get(API_ENDPOINTS.PAYMENT_PLANS);
+    return r.data;
+  }
+
+  async initializePayment(tier: string) {
+    const r = await this.client.post(API_ENDPOINTS.PAYMENT_INITIALIZE, { tier });
+    return r.data;
+  }
+
+  async verifyPayment(reference: string) {
+    const r = await this.client.get(`${API_ENDPOINTS.PAYMENT_VERIFY}/${reference}`);
+    return r.data;
+  }
+
+  async googleMobileAuth(idToken: string) {
+    const r = await this.client.post(API_ENDPOINTS.GOOGLE_MOBILE_AUTH, { idToken });
     return r.data;
   }
 }

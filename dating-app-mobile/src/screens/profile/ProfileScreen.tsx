@@ -82,6 +82,23 @@ export const ProfileScreen: React.FC = () => {
         )}
       </View>
 
+      {/* Photo Gallery */}
+      {profile?.photos?.length ? (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Photos</Text>
+          <View style={styles.photoGrid}>
+            {profile.photos.map((uri, idx) => (
+              <View key={uri} style={styles.photoSlot}>
+                <Image source={{ uri }} style={styles.photoThumb} />
+                {idx === 0 && (
+                  <View style={styles.mainBadge}><Text style={styles.mainBadgeText}>Main</Text></View>
+                )}
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
       {/* Bio */}
       {profile?.bio ? (
         <View style={styles.card}>
@@ -120,6 +137,20 @@ export const ProfileScreen: React.FC = () => {
               <View key={i} style={[styles.chip, styles.chipInterest]}><Text style={styles.chipText}>{i}</Text></View>
             ))}
           </View>
+        </View>
+      ) : null}
+
+      {/* Hot Takes */}
+      {profile?.hotTakes?.filter(Boolean).length ? (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>🔥 My Hot Takes</Text>
+          <Text style={styles.hotTakesSubtitle}>These are shared with your match as conversation starters</Text>
+          {profile.hotTakes.filter(Boolean).map((take, idx) => (
+            <View key={idx} style={styles.hotTakeItem}>
+              <Text style={styles.hotTakeEmoji}>💬</Text>
+              <Text style={styles.hotTakeText}>{take}</Text>
+            </View>
+          ))}
         </View>
       ) : null}
 
@@ -193,6 +224,24 @@ const styles = StyleSheet.create({
   },
   chipInterest: { backgroundColor: '#EDE7F6' },
   chipText: { fontSize: 12, color: COLORS.darkGray },
+  hotTakesSubtitle: { fontSize: 12, color: COLORS.gray, marginBottom: 12 },
+  hotTakeItem: {
+    flexDirection: 'row', alignItems: 'flex-start',
+    backgroundColor: '#FFF8F0', borderRadius: 10,
+    padding: 10, marginBottom: 8,
+    borderLeftWidth: 3, borderLeftColor: '#FFA726',
+  },
+  hotTakeEmoji: { fontSize: 16, marginRight: 8, marginTop: 1 },
+  hotTakeText: { flex: 1, fontSize: 14, color: COLORS.darkGray, lineHeight: 20 },
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  photoSlot: { width: '31%', aspectRatio: 3 / 4, borderRadius: 10, overflow: 'hidden', position: 'relative' },
+  photoThumb: { width: '100%', height: '100%' },
+  mainBadge: {
+    position: 'absolute', bottom: 5, left: 5,
+    backgroundColor: COLORS.primary, borderRadius: 5,
+    paddingHorizontal: 6, paddingVertical: 2,
+  },
+  mainBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
   actions: { margin: 16, marginTop: 20 },
   actionBtn: {
     flexDirection: 'row', alignItems: 'center',

@@ -15,6 +15,7 @@ import { MatchDetailsScreen } from '../screens/matches/MatchDetailsScreen';
 import { ProfileEditScreen } from '../screens/profile/ProfileEditScreen';
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
 import { StealsScreen } from '../screens/steals/StealsScreen';
+import { SubscriptionScreen } from '../screens/subscription/SubscriptionScreen';
 import { LoadingScreen } from '../components/common/LoadingScreen';
 
 // Lazy-load VideoCallScreen so Daily.co native modules don't block Expo Go bundling
@@ -41,6 +42,7 @@ export type MainStackParamList = {
   ProfileEdit: undefined;
   Settings: undefined;
   Steals: undefined;
+  Subscription: undefined;
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -85,5 +87,6 @@ export const MainNavigator = () => (
     <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} options={{ presentation: 'modal' }} />
     <Stack.Screen name="Settings" component={SettingsScreen} options={{ presentation: 'card' }} />
     <Stack.Screen name="Steals" component={StealsScreen} options={{ presentation: 'card' }} />
+    <Stack.Screen name="Subscription" component={SubscriptionScreen} options={{ presentation: 'card' }} />
   </Stack.Navigator>
 );

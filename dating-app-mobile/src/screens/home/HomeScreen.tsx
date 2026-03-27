@@ -1,13 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image,
   TouchableOpacity, RefreshControl,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchMatches } from '../../store/slices/matchSlice';
-import { fetchPendingSteals } from '../../store/slices/stealSlice';
+import { fetchPendingSteals, fetchSentSteals } from '../../store/slices/stealSlice';
 import { COLORS, MATCH_STATUS_CONFIG } from '../../constants';
 import { MainStackParamList } from '../../navigation/MainNavigator';
 import { Match } from '../../types';
@@ -19,14 +19,15 @@ export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<Nav>();
   const { user } = useAppSelector((s) => s.auth);
   const { matches, isLoading } = useAppSelector((s) => s.matches);
-  const { incomingRequests } = useAppSelector((s) => s.steals);
+  const { incomingRequests, sentRequests } = useAppSelector((s) => s.steals);
 
-  const load = () => {
+  const load = useCallback(() => {
     dispatch(fetchMatches());
     dispatch(fetchPendingSteals());
-  };
+    dispatch(fetchSentSteals());
+  }, [dispatch]);
 
-  useEffect(() => { load(); }, []);
+  useFocusEffect(load);
 
   const activeMatches = matches.filter((m) => m.status !== 'broken').slice(0, 3);
 
@@ -78,6 +79,10 @@ export const HomeScreen: React.FC = () => {
           <Text style={styles.statNum}>{matches.filter((m) => m.status === 'date_accepted').length}</Text>
           <Text style={styles.statLabel}>Dates</Text>
         </View>
+        <TouchableOpacity style={styles.statCard} onPress={() => navigation.navigate('Steals' as any)}>
+          <Text style={styles.statNum}>{incomingRequests.length + sentRequests.filter((r) => r.status === 'pending').length}</Text>
+          <Text style={styles.statLabel}>⚡ Steals</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Recent matches */}

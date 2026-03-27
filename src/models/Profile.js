@@ -100,6 +100,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ARRAY(DataTypes.STRING),
       defaultValue: []
     },
+    // Hot takes — strong opinions or conversation starters shown to match partner
+    hotTakes: {
+      type: DataTypes.ARRAY(DataTypes.TEXT),
+      field: 'hot_takes',
+      defaultValue: []
+    },
     // Profile completion percentage
     completionPercentage: {
       type: DataTypes.INTEGER,

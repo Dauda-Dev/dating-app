@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Alert,
+  View, Text, StyleSheet, TouchableOpacity, Alert, Platform,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -39,7 +39,14 @@ export const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
       }
       if (completed) {
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        await dispatch(completeVideoSession({ sessionId, durationSeconds: duration }));
+        const result = await dispatch(completeVideoSession({ sessionId, durationSeconds: duration }));
+        if (completeVideoSession.rejected.match(result)) {
+          // Session too short or API error — inform the user but still go back
+          Alert.alert(
+            'Call Not Counted',
+            (result.payload as string) || 'The call was too short to count. You need at least 2 minutes.',
+          );
+        }
       }
       navigation.goBack();
     },
@@ -69,7 +76,37 @@ export const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
 
     let call: any;
 
+    const requestPermissions = async (): Promise<boolean> => {
+      try {
+        if (Platform.OS === 'android') {
+          const { PermissionsAndroid } = require('react-native');
+          const grants = await PermissionsAndroid.requestMultiple([
+            PermissionsAndroid.PERMISSIONS.CAMERA,
+            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          ]);
+          const cameraOk = grants[PermissionsAndroid.PERMISSIONS.CAMERA] === PermissionsAndroid.RESULTS.GRANTED;
+          const micOk = grants[PermissionsAndroid.PERMISSIONS.RECORD_AUDIO] === PermissionsAndroid.RESULTS.GRANTED;
+          if (!cameraOk || !micOk) {
+            Alert.alert(
+              'Permissions Required',
+              'Camera and microphone access are required for video calls. Please grant them in Settings.',
+            );
+            return false;
+          }
+        }
+        return true;
+      } catch {
+        return true; // proceed optimistically
+      }
+    };
+
     const init = async () => {
+      const hasPermissions = await requestPermissions();
+      if (!hasPermissions) {
+        navigation.goBack();
+        return;
+      }
+
       try {
         call = DailyIframe.createCallObject();
         callRef.current = call;
@@ -77,6 +114,8 @@ export const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
         call.on('joined-meeting', () => {
           setCallState('joined');
           startTimeRef.current = Date.now();
+          // Snapshot participants immediately so local video renders
+          setParticipants({ ...call.participants() });
           timerRef.current = setInterval(() => {
             setElapsed((e) => e + 1);
           }, 1000);
@@ -103,7 +142,12 @@ export const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
           endCall(false);
         });
 
-        await call.join({ url: roomUrl });
+        // Explicitly start with camera AND audio enabled
+        await call.join({
+          url: roomUrl,
+          startVideoOff: false,
+          startAudioOff: false,
+        });
       } catch (err: any) {
         Alert.alert('Error', 'Failed to join video call');
         navigation.goBack();
@@ -116,9 +160,13 @@ export const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
     const warningTimer = setTimeout(() => {
       const dur = Math.floor((Date.now() - startTimeRef.current) / 1000);
       if (dur < VIDEO_CONFIG.MIN_DURATION) {
+        const remaining = VIDEO_CONFIG.MIN_DURATION - dur;
+        const remainingLabel = remaining < 60
+          ? `${remaining}s`
+          : `${Math.floor(remaining / 60)}m ${remaining % 60}s`;
         Alert.alert(
           '⏰ Keep talking',
-          `You need at least ${Math.floor(VIDEO_CONFIG.MIN_DURATION / 60)} minutes for the call to count. Only ${Math.floor((VIDEO_CONFIG.MIN_DURATION - dur) / 60)}m left!`
+          `You need at least ${Math.floor(VIDEO_CONFIG.MIN_DURATION / 60)} minutes for the call to count. Only ${remainingLabel} left!`
         );
       }
     }, (VIDEO_CONFIG.MIN_DURATION - VIDEO_CONFIG.WARNING_TIME) * 1000);
@@ -136,7 +184,7 @@ export const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
       'End Call',
       met
         ? 'Great conversation! End the call and unlock the next step?'
-        : `Only ${Math.floor(dur / 60)}m ${dur % 60}s elapsed. You need at least ${Math.floor(VIDEO_CONFIG.MIN_DURATION / 60)} minutes to complete the session.`,
+        : `Only ${dur < 60 ? `${dur}s` : `${Math.floor(dur / 60)}m ${dur % 60}s`} elapsed. You need at least ${Math.floor(VIDEO_CONFIG.MIN_DURATION / 60)} minutes to complete the session.`,
       [
         { text: 'Keep Talking', style: 'cancel' },
         { text: met ? 'Complete & Continue' : 'Leave Anyway', onPress: () => endCall(met) },
@@ -194,11 +242,12 @@ export const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
       </View>
 
       {/* Local video (picture-in-picture) */}
-      {callState === 'joined' && DailyMediaView && (
+      {callState === 'joined' && DailyMediaView && participants?.local && (
         <View style={styles.localContainer}>
           <DailyMediaView
-            sessionId="local"
-            videoTrackState={participants?.local?.tracks?.video}
+            sessionId={participants.local.session_id}
+            videoTrackState={participants.local.tracks?.video}
+            audioTrackState={participants.local.tracks?.audio}
             mirror
             style={styles.localVideo}
           />

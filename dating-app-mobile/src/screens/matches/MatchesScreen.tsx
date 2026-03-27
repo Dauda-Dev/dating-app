@@ -1,9 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Image,
   TouchableOpacity, RefreshControl,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchMatches } from '../../store/slices/matchSlice';
@@ -19,7 +19,9 @@ export const MatchesScreen: React.FC = () => {
   const { user } = useAppSelector((s) => s.auth);
   const { matches, isLoading } = useAppSelector((s) => s.matches);
 
-  useEffect(() => { dispatch(fetchMatches()); }, []);
+  useFocusEffect(
+    useCallback(() => { dispatch(fetchMatches()); }, [])
+  );
 
   const getPartner = (match: Match) => {
     if (!user) return null;
