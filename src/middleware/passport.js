@@ -2,15 +2,17 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const db = require('../config/database');
 
-// Configure Google OAuth Strategy
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/api/auth/google/callback',
-    },
-    async (accessToken, refreshToken, profile, done) => {
+// Only register the Google strategy if credentials are present.
+// Without this guard the server crashes on startup when env vars are not set.
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/api/auth/google/callback',
+      },
+      async (accessToken, refreshToken, profile, done) => {
       try {
         // Check if user with this Google ID exists
         let user = await db.User.findOne({
@@ -63,6 +65,9 @@ passport.use(
     }
   )
 );
+} else {
+  console.warn('Google OAuth is disabled: GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET not set.');
+}
 
 // Serialize user for session
 passport.serializeUser((user, done) => {
