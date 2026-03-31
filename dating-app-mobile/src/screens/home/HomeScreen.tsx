@@ -12,6 +12,28 @@ import { COLORS, MATCH_STATUS_CONFIG } from '../../constants';
 import { MainStackParamList } from '../../navigation/MainNavigator';
 import { Match } from '../../types';
 
+const TIER_CONFIG = {
+  free: {
+    bg: '#F0F9FF',
+    border: '#BAE6FD',
+    emoji: '✨',
+    title: 'Upgrade to Premium',
+    body: 'Unlock Liked Me, more likes & priority visibility',
+    btnText: 'See Plans',
+    btnBg: COLORS.primary,
+  },
+  premium: {
+    bg: '#FAF5FF',
+    border: '#DDD6FE',
+    emoji: '🥇',
+    title: 'Go Gold for the best experience',
+    body: 'Send steal requests & get top-of-stack placement',
+    btnText: 'Upgrade to Gold',
+    btnBg: '#D97706',
+  },
+  gold: null,
+};
+
 type Nav = NativeStackNavigationProp<MainStackParamList>;
 
 export const HomeScreen: React.FC = () => {
@@ -28,6 +50,9 @@ export const HomeScreen: React.FC = () => {
   }, [dispatch]);
 
   useFocusEffect(load);
+
+  const tier = (user?.subscriptionTier || 'free') as 'free' | 'premium' | 'gold';
+  const tierBannerConfig = TIER_CONFIG[tier];
 
   const activeMatches = matches.filter((m) => m.status !== 'broken').slice(0, 3);
 
@@ -54,6 +79,30 @@ export const HomeScreen: React.FC = () => {
           <View style={styles.avatarPlaceholder}><Text style={{ fontSize: 24 }}>👤</Text></View>
         )}
       </View>
+
+      {/* Tier banner / upgrade CTA */}
+      {tier === 'gold' ? (
+        <View style={styles.goldPride}>
+          <Text style={styles.goldPrideText}>🥇 Gold Member — you're at the top!</Text>
+        </View>
+      ) : tierBannerConfig ? (
+        <TouchableOpacity
+          style={[styles.tierBanner, { backgroundColor: tierBannerConfig.bg, borderColor: tierBannerConfig.border }]}
+          onPress={() => navigation.navigate('Subscription' as any)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.tierBannerLeft}>
+            <Text style={styles.tierBannerEmoji}>{tierBannerConfig.emoji}</Text>
+          </View>
+          <View style={styles.tierBannerBody}>
+            <Text style={styles.tierBannerTitle}>{tierBannerConfig.title}</Text>
+            <Text style={styles.tierBannerSub}>{tierBannerConfig.body}</Text>
+          </View>
+          <View style={[styles.tierBannerBtn, { backgroundColor: tierBannerConfig.btnBg }]}>
+            <Text style={styles.tierBannerBtnText}>{tierBannerConfig.btnText}</Text>
+          </View>
+        </TouchableOpacity>
+      ) : null}
 
       {/* Steal notifications */}
       {incomingRequests.length > 0 && (
@@ -188,4 +237,36 @@ const styles = StyleSheet.create({
   matchName: { fontSize: 16, fontWeight: '600', color: COLORS.black },
   matchStatus: { fontSize: 13, marginTop: 3 },
   arrow: { fontSize: 22, color: COLORS.lightGray },
+  // Tier banner
+  goldPride: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginBottom: 14,
+    alignItems: 'center',
+  },
+  goldPrideText: { fontSize: 14, fontWeight: '700', color: '#D97706' },
+  tierBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 14,
+    gap: 10,
+  },
+  tierBannerLeft: { width: 36, alignItems: 'center' },
+  tierBannerEmoji: { fontSize: 26 },
+  tierBannerBody: { flex: 1 },
+  tierBannerTitle: { fontSize: 13, fontWeight: '700', color: COLORS.black },
+  tierBannerSub: { fontSize: 11, color: COLORS.gray, marginTop: 2 },
+  tierBannerBtn: {
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  tierBannerBtnText: { fontSize: 11, fontWeight: '700', color: '#fff' },
 });
