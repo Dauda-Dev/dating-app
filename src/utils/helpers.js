@@ -53,6 +53,7 @@ const formatUserResponse = (user) => {
     relationshipStatus: user.relationshipStatus,
     isEmailVerified: user.isEmailVerified,
     profileCompleted: user.profileCompleted || false,
+    subscriptionTier: user.subscriptionTier || 'free',
     lastActiveAt: user.lastLoginAt || user.lastActive,
     createdAt: user.createdAt,
   };

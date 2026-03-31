@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const stealController = require('../controllers/stealController');
 const { authenticateJWT } = require('../middleware/auth');
+const { requireTier } = require('../middleware/tierGate');
 const { stealValidator } = require('../validators/inputValidator');
 const { handleValidationErrors } = require('../middleware/validation');
 
@@ -59,7 +60,7 @@ const { handleValidationErrors } = require('../middleware/validation');
  *       409:
  *         description: Cannot steal - user not in an active match
  */
-router.post('/request', authenticateJWT, stealValidator, handleValidationErrors, stealController.createRequest);
+router.post('/request', authenticateJWT, requireTier('gold'), stealValidator, handleValidationErrors, stealController.createRequest);
 
 /**
  * @swagger

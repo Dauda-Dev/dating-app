@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const discoveryController = require('../controllers/discoveryController');
 const { authenticateJWT } = require('../middleware/auth');
+const { requireTier } = require('../middleware/tierGate');
 const { likeValidator } = require('../validators/inputValidator');
 const { handleValidationErrors } = require('../middleware/validation');
 
@@ -121,5 +122,46 @@ router.post('/like', authenticateJWT, likeValidator, handleValidationErrors, dis
  *         $ref: '#/components/responses/NotFoundError'
  */
 router.get('/user/:id', authenticateJWT, discoveryController.getUserCard);
+
+/**
+ * @swagger
+ * /api/discovery/liked-me:
+ *   get:
+ *     summary: See who liked you (Premium & Gold only)
+ *     tags: [Discovery]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Users who liked you
+ *       403:
+ *         description: Premium or Gold plan required
+ */
+router.get('/liked-me', authenticateJWT, requireTier('premium', 'gold'), discoveryController.likedMe);
+
+/**
+ * @swagger
+ * /api/discovery/quota:
+ *   get:
+ *     summary: Get your daily like quota status
+ *     tags: [Discovery]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Quota information
+ */
+router.get('/quota', authenticateJWT, discoveryController.getQuota);
 
 module.exports = router;

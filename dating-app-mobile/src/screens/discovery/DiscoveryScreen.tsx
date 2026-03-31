@@ -1,29 +1,58 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, Image, TouchableOpacity,
   Animated, PanResponder, Dimensions, ActivityIndicator, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchEligibleUsers, likeUser, passUser, removeUserFromDeck } from '../../store/slices/discoverySlice';
 import { requestSteal } from '../../store/slices/stealSlice';
+import { apiClient } from '../../services/apiClient';
 import { COLORS } from '../../constants';
 import { DiscoveryUser } from '../../types';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const SWIPE_THRESHOLD = SCREEN_W * 0.3;
 
+interface QuotaInfo {
+  tier: string;
+  unlimited: boolean;
+  used: number | null;
+  limit: number | null;
+  remaining: number | null;
+}
+
 export const DiscoveryScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const dispatch = useAppDispatch();
   const { users, currentIndex, isLoading } = useAppSelector((s) => s.discovery);
+  const { user } = useAppSelector((s) => s.auth);
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [quota, setQuota] = useState<QuotaInfo | null>(null);
+
+  const tier = user?.subscriptionTier || 'free';
+  const isGold = tier === 'gold';
+
+  const loadQuota = useCallback(async () => {
+    if (tier === 'premium' || tier === 'gold') {
+      setQuota({ tier, unlimited: true, used: null, limit: null, remaining: null });
+      return;
+    }
+    try {
+      const q = await apiClient.getLikeQuota();
+      setQuota(q);
+    } catch {
+      // non-critical — don't block UI
+    }
+  }, [tier]);
 
   // Re-fetch every time this tab is focused so swiped users don't reappear
   useFocusEffect(
     useCallback(() => {
       dispatch(fetchEligibleUsers());
-    }, [])
+      loadQuota();
+    }, [loadQuota])
   );
 
   const position = useRef(new Animated.ValueXY()).current;
@@ -47,6 +76,20 @@ export const DiscoveryScreen: React.FC = () => {
   const swipeRight = () => {
     const currentUser = users[currentIndex];
     if (!currentUser) return;
+
+    // Quota guard for free tier
+    if (quota && !quota.unlimited && quota.remaining !== null && quota.remaining <= 0) {
+      Alert.alert(
+        '💔 Daily Limit Reached',
+        `Free plan allows ${quota.limit} likes per day. Upgrade to Premium or Gold for unlimited likes.`,
+        [
+          { text: 'Not Now', style: 'cancel' },
+          { text: 'Upgrade ✨', onPress: () => navigation.navigate('Subscription') },
+        ]
+      );
+      return;
+    }
+
     setPhotoIndex(0);
     // Optimistically remove from deck immediately — prevents reappearing on any refresh
     dispatch(removeUserFromDeck(currentUser.id));
@@ -57,12 +100,24 @@ export const DiscoveryScreen: React.FC = () => {
     }).start(async () => {
       position.setValue({ x: 0, y: 0 });
       const result = await dispatch(likeUser(currentUser.id));
-      if (likeUser.fulfilled.match(result) && result.payload.result?.matched) {
-        Alert.alert(
-          "🎉 It's a Match!",
-          `You and ${currentUser.firstName} liked each other! Go to Matches to start your journey.`,
-          [{ text: 'Awesome!', style: 'default' }]
-        );
+      if (likeUser.fulfilled.match(result)) {
+        // Update quota counter locally
+        if (quota && !quota.unlimited && quota.remaining !== null) {
+          setQuota((q) => q ? { ...q, remaining: Math.max(0, (q.remaining ?? 1) - 1), used: (q.used ?? 0) + 1 } : q);
+        }
+        if (result.payload.result?.matched) {
+          Alert.alert(
+            "🎉 It's a Match!",
+            `You and ${currentUser.firstName} liked each other! Go to Matches to start your journey.`,
+            [{ text: 'Awesome!', style: 'default' }]
+          );
+        }
+      } else if (likeUser.rejected.match(result)) {
+        // Check if it's a quota error (429)
+        const payload = result.payload as string;
+        if (payload?.includes('limit')) {
+          Alert.alert('Daily Limit Reached', 'Upgrade to Premium or Gold for unlimited likes.');
+        }
       }
     });
   };
@@ -133,7 +188,20 @@ export const DiscoveryScreen: React.FC = () => {
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.screenTitle}>Discover 🔍</Text>
+      {/* Header row: title + quota pill */}
+      <View style={styles.headerRow}>
+        <Text style={styles.screenTitle}>Discover 🔍</Text>
+        {quota && !quota.unlimited && quota.remaining !== null && (
+          <TouchableOpacity
+            style={[styles.quotaPill, quota.remaining === 0 && styles.quotaPillEmpty]}
+            onPress={() => navigation.navigate('Subscription')}
+          >
+            <Text style={[styles.quotaPillText, quota.remaining === 0 && styles.quotaPillTextEmpty]}>
+              {quota.remaining === 0 ? '💔 0 likes left · Upgrade' : `💚 ${quota.remaining} likes left`}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* Next card (behind) */}
       {users[currentIndex + 1] && (
@@ -211,12 +279,28 @@ export const DiscoveryScreen: React.FC = () => {
         <TouchableOpacity style={styles.passBtn} onPress={swipeLeft}>
           <Text style={styles.passBtnText}>✕</Text>
         </TouchableOpacity>
+
+        {/* Steal — Gold only */}
         <TouchableOpacity
-          style={styles.stealBtn}
-          onPress={() => dispatch(requestSteal({ targetUserId: currentUser.id }))}
+          style={[styles.stealBtn, !isGold && styles.stealBtnLocked]}
+          onPress={() => {
+            if (!isGold) {
+              Alert.alert(
+                '⚡ Gold Feature',
+                'Steal requests are exclusive to Gold members.',
+                [
+                  { text: 'Not Now', style: 'cancel' },
+                  { text: 'Upgrade to Gold 🥇', onPress: () => navigation.navigate('Subscription') },
+                ]
+              );
+              return;
+            }
+            dispatch(requestSteal({ targetUserId: currentUser.id }));
+          }}
         >
-          <Text style={styles.stealBtnText}>⚡</Text>
+          <Text style={styles.stealBtnText}>{isGold ? '⚡' : '🔒'}</Text>
         </TouchableOpacity>
+
         <TouchableOpacity style={styles.likeBtn} onPress={swipeRight}>
           <Text style={styles.likeBtnText}>♥</Text>
         </TouchableOpacity>
@@ -229,7 +313,18 @@ const CARD_H = Dimensions.get('window').height * 0.6;
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.background, alignItems: 'center' },
-  screenTitle: { fontSize: 22, fontWeight: '700', color: COLORS.black, alignSelf: 'flex-start', paddingHorizontal: 20, paddingTop: 56, marginBottom: 12 },
+  headerRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    alignSelf: 'stretch', paddingHorizontal: 20, paddingTop: 56, marginBottom: 12,
+  },
+  screenTitle: { fontSize: 22, fontWeight: '700', color: COLORS.black },
+  quotaPill: {
+    backgroundColor: '#ECFDF5', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
+    borderWidth: 1, borderColor: '#6EE7B7',
+  },
+  quotaPillEmpty: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
+  quotaPillText: { fontSize: 12, fontWeight: '600', color: '#065F46' },
+  quotaPillTextEmpty: { color: '#991B1B' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
   loadingText: { marginTop: 12, color: COLORS.gray, fontSize: 15 },
   emptyEmoji: { fontSize: 64, marginBottom: 12 },
@@ -269,12 +364,8 @@ const styles = StyleSheet.create({
   },
   dotActive: { backgroundColor: '#fff' },
   cardGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    paddingHorizontal: 20, paddingVertical: 20,
   },
   cardName: { fontSize: 24, fontWeight: '700', color: '#fff' },
   cardLocation: { fontSize: 14, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
@@ -293,11 +384,8 @@ const styles = StyleSheet.create({
   },
   nopeLabelText: { color: '#F44336', fontSize: 22, fontWeight: '800' },
   actions: {
-    position: 'absolute',
-    bottom: 32,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 24,
+    position: 'absolute', bottom: 32,
+    flexDirection: 'row', alignItems: 'center', gap: 24,
   },
   passBtn: {
     width: 60, height: 60, borderRadius: 30,
@@ -310,6 +398,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 4,
   },
+  stealBtnLocked: { backgroundColor: '#F3F4F6' },
   stealBtnText: { fontSize: 22 },
   likeBtn: {
     width: 60, height: 60, borderRadius: 30,

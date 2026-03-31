@@ -45,10 +45,14 @@ class DiscoveryService {
           attributes: ['bio', 'interests', 'hobbies', 'photos', 'occupation']
         }
       ],
-      attributes: ['id', 'firstName', 'lastName', 'gender', 'dateOfBirth', 'profilePhoto', 'relationshipStatus'],
+      attributes: ['id', 'firstName', 'lastName', 'gender', 'dateOfBirth', 'profilePhoto', 'relationshipStatus', 'subscriptionTier'],
       limit,
       offset,
-      order: [['createdAt', 'DESC']],
+      // Gold users appear first, then Premium, then Free — within each tier sorted by newest
+      order: [
+        [db.Sequelize.literal(`CASE WHEN "User"."subscription_tier" = 'gold' THEN 0 WHEN "User"."subscription_tier" = 'premium' THEN 1 ELSE 2 END`), 'ASC'],
+        ['createdAt', 'DESC'],
+      ],
       raw: false,
     });
 

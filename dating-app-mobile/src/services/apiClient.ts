@@ -141,6 +141,16 @@ class ApiClient {
     return r.data;
   }
 
+  async getLikedMe(limit = 20, offset = 0) {
+    const r = await this.client.get(API_ENDPOINTS.LIKED_ME, { params: { limit, offset } });
+    return r.data;
+  }
+
+  async getLikeQuota() {
+    const r = await this.client.get(API_ENDPOINTS.LIKE_QUOTA);
+    return r.data;
+  }
+
   // ── Matches ───────────────────────────────────────────────────────────────
   async getMatches(limit = 20, offset = 0) {
     const r = await this.client.get(API_ENDPOINTS.MY_MATCHES, { params: { limit, offset } });
