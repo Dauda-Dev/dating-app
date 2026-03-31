@@ -188,20 +188,31 @@ export const DiscoveryScreen: React.FC = () => {
 
   return (
     <View style={styles.screen}>
-      {/* Header row: title + quota pill */}
+      {/* Tinder-style header */}
       <View style={styles.headerRow}>
-        <Text style={styles.screenTitle}>Discover 🔍</Text>
-        {quota && !quota.unlimited && quota.remaining !== null && (
-          <TouchableOpacity
-            style={[styles.quotaPill, quota.remaining === 0 && styles.quotaPillEmpty]}
-            onPress={() => navigation.navigate('Subscription')}
-          >
-            <Text style={[styles.quotaPillText, quota.remaining === 0 && styles.quotaPillTextEmpty]}>
-              {quota.remaining === 0 ? '💔 0 likes left · Upgrade' : `💚 ${quota.remaining} likes left`}
-            </Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('Settings' as any)}>
+          <Text style={styles.headerBtnIcon}>⚙️</Text>
+        </TouchableOpacity>
+        <Text style={styles.screenTitle}>🔥</Text>
+        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('Subscription' as any)}>
+          {tier === 'gold'
+            ? <Text style={styles.headerBtnIcon}>🥇</Text>
+            : tier === 'premium'
+            ? <Text style={styles.headerBtnIcon}>⭐</Text>
+            : <Text style={[styles.headerBtnIcon, { color: COLORS.primary }]}>✨</Text>}
+        </TouchableOpacity>
       </View>
+      {/* Quota pill (free only) */}
+      {quota && !quota.unlimited && quota.remaining !== null && (
+        <TouchableOpacity
+          style={[styles.quotaPill, quota.remaining === 0 && styles.quotaPillEmpty]}
+          onPress={() => navigation.navigate('Subscription')}
+        >
+          <Text style={[styles.quotaPillText, quota.remaining === 0 && styles.quotaPillTextEmpty]}>
+            {quota.remaining === 0 ? '💔 0 likes left · Upgrade' : `💚 ${quota.remaining} likes left`}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {/* Next card (behind) */}
       {users[currentIndex + 1] && (
@@ -274,15 +285,27 @@ export const DiscoveryScreen: React.FC = () => {
         </LinearGradient>
       </Animated.View>
 
-      {/* Action buttons */}
+      {/* Tinder-style action buttons */}
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.passBtn} onPress={swipeLeft}>
+        {/* Pass — red */}
+        <TouchableOpacity style={styles.passBtn} onPress={swipeLeft} activeOpacity={0.8}>
           <Text style={styles.passBtnText}>✕</Text>
         </TouchableOpacity>
 
-        {/* Steal — Gold only */}
+        {/* Super-like — yellow (available to all, counts as a like) */}
+        <TouchableOpacity style={styles.superBtn} onPress={swipeRight} activeOpacity={0.8}>
+          <Text style={styles.superBtnText}>★</Text>
+        </TouchableOpacity>
+
+        {/* Like — green */}
+        <TouchableOpacity style={styles.likeBtn} onPress={swipeRight} activeOpacity={0.8}>
+          <Text style={styles.likeBtnText}>♥</Text>
+        </TouchableOpacity>
+
+        {/* Steal — purple, Gold only */}
         <TouchableOpacity
           style={[styles.stealBtn, !isGold && styles.stealBtnLocked]}
+          activeOpacity={0.8}
           onPress={() => {
             if (!isGold) {
               Alert.alert(
@@ -300,110 +323,159 @@ export const DiscoveryScreen: React.FC = () => {
         >
           <Text style={styles.stealBtnText}>{isGold ? '⚡' : '🔒'}</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity style={styles.likeBtn} onPress={swipeRight}>
-          <Text style={styles.likeBtnText}>♥</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
 };
 
-const CARD_H = Dimensions.get('window').height * 0.6;
+const CARD_H = Dimensions.get('window').height * 0.72;
+const SCREEN_H = Dimensions.get('window').height;
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.background, alignItems: 'center' },
+  screen: { flex: 1, backgroundColor: '#fff', alignItems: 'center' },
+
+  // ── Header ──
   headerRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    alignSelf: 'stretch', paddingHorizontal: 20, paddingTop: 56, marginBottom: 12,
+    alignSelf: 'stretch', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 8,
   },
-  screenTitle: { fontSize: 22, fontWeight: '700', color: COLORS.black },
+  headerBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  headerBtnIcon: { fontSize: 22 },
+  screenTitle: { fontSize: 34, fontWeight: '700', color: COLORS.primary },
+
+  // ── Quota pill ──
   quotaPill: {
-    backgroundColor: '#ECFDF5', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
-    borderWidth: 1, borderColor: '#6EE7B7',
+    backgroundColor: '#ECFDF5', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5,
+    borderWidth: 1, borderColor: '#6EE7B7', alignSelf: 'center', marginBottom: 8,
   },
   quotaPillEmpty: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
   quotaPillText: { fontSize: 12, fontWeight: '600', color: '#065F46' },
   quotaPillTextEmpty: { color: '#991B1B' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
+
+  // ── Loading / empty ──
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   loadingText: { marginTop: 12, color: COLORS.gray, fontSize: 15 },
-  emptyEmoji: { fontSize: 64, marginBottom: 12 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: COLORS.black, marginBottom: 6 },
-  emptySubtitle: { color: COLORS.gray, marginBottom: 24 },
-  refreshBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 24 },
-  refreshBtnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
+  emptyEmoji: { fontSize: 72, marginBottom: 16 },
+  emptyTitle: { fontSize: 22, fontWeight: '800', color: COLORS.black, marginBottom: 6 },
+  emptySubtitle: { color: COLORS.gray, marginBottom: 28, fontSize: 15 },
+  refreshBtn: {
+    backgroundColor: COLORS.primary, paddingHorizontal: 32, paddingVertical: 14,
+    borderRadius: 28,
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+  },
+  refreshBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+
+  // ── Cards ──
   card: {
-    width: SCREEN_W - 32,
+    width: SCREEN_W - 24,
     height: CARD_H,
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: 'hidden',
     position: 'absolute',
-    top: 100,
+    top: 108,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
-    backgroundColor: '#fff',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 8,
+    backgroundColor: '#f0f0f0',
   },
   nextCard: {
-    top: 108,
-    transform: [{ scale: 0.96 }],
+    top: 116,
+    transform: [{ scale: 0.95 }],
+    opacity: 0.85,
   },
-  cardImage: { width: '100%', height: '100%' },
+  cardImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   cardImagePlaceholder: { backgroundColor: COLORS.lightGray, alignItems: 'center', justifyContent: 'center' },
   tapLeft: { position: 'absolute', top: 0, left: 0, width: '40%', height: '80%' },
   tapRight: { position: 'absolute', top: 0, right: 0, width: '40%', height: '80%' },
+
+  // Photo dots — Tinder has them as thin pill bars at top
   dotsRow: {
-    position: 'absolute', top: 10, left: 0, right: 0,
-    flexDirection: 'row', justifyContent: 'center', gap: 5,
+    position: 'absolute', top: 8, left: 8, right: 8,
+    flexDirection: 'row', gap: 4,
   },
   dot: {
-    height: 3, flex: 1, maxWidth: 40, borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.45)',
+    height: 3, flex: 1, borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
   dotActive: { backgroundColor: '#fff' },
+
+  // Gradient info overlay
   cardGradient: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 20, paddingVertical: 20,
+    paddingHorizontal: 20, paddingTop: 60, paddingBottom: 24,
   },
-  cardName: { fontSize: 24, fontWeight: '700', color: '#fff' },
-  cardLocation: { fontSize: 14, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
-  cardBio: { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 4 },
-  compat: { fontSize: 13, color: '#FFD93D', marginTop: 4, fontWeight: '600' },
+  cardName: { fontSize: 28, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+  cardLocation: { fontSize: 14, color: 'rgba(255,255,255,0.9)', marginTop: 3, fontWeight: '500' },
+  cardBio: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 5, lineHeight: 20 },
+  compat: { fontSize: 13, color: '#FFD93D', marginTop: 6, fontWeight: '700' },
+
+  // LIKE / NOPE stamps — exactly like Tinder (rotated, thick border)
   likeLabel: {
-    position: 'absolute', top: 40, left: 20,
-    borderWidth: 3, borderColor: '#4CAF50', borderRadius: 8,
-    paddingHorizontal: 12, paddingVertical: 4, transform: [{ rotate: '-15deg' }],
+    position: 'absolute', top: 48, left: 24,
+    borderWidth: 4, borderColor: '#01DF8B', borderRadius: 6,
+    paddingHorizontal: 14, paddingVertical: 5,
+    transform: [{ rotate: '-22deg' }],
+    backgroundColor: 'rgba(0,0,0,0.04)',
   },
-  likeLabelText: { color: '#4CAF50', fontSize: 22, fontWeight: '800' },
+  likeLabelText: { color: '#01DF8B', fontSize: 26, fontWeight: '900', letterSpacing: 2 },
   nopeLabel: {
-    position: 'absolute', top: 40, right: 20,
-    borderWidth: 3, borderColor: '#F44336', borderRadius: 8,
-    paddingHorizontal: 12, paddingVertical: 4, transform: [{ rotate: '15deg' }],
+    position: 'absolute', top: 48, right: 24,
+    borderWidth: 4, borderColor: '#FD3C5B', borderRadius: 6,
+    paddingHorizontal: 14, paddingVertical: 5,
+    transform: [{ rotate: '22deg' }],
+    backgroundColor: 'rgba(0,0,0,0.04)',
   },
-  nopeLabelText: { color: '#F44336', fontSize: 22, fontWeight: '800' },
+  nopeLabelText: { color: '#FD3C5B', fontSize: 26, fontWeight: '900', letterSpacing: 2 },
+
+  // ── Action buttons — Tinder sizing ──
   actions: {
-    position: 'absolute', bottom: 32,
-    flexDirection: 'row', alignItems: 'center', gap: 24,
+    position: 'absolute',
+    bottom: SCREEN_H * 0.04,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
   },
+  // Red ring — Pass
   passBtn: {
-    width: 60, height: 60, borderRadius: 30,
-    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 4,
+    width: 64, height: 64, borderRadius: 32,
+    backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: '#FD3C5B',
+    shadowColor: '#FD3C5B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 5,
   },
-  passBtnText: { fontSize: 24, color: '#F44336' },
-  stealBtn: {
-    width: 50, height: 50, borderRadius: 25,
-    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 4,
+  passBtnText: { fontSize: 26, color: '#FD3C5B', fontWeight: '700' },
+  // Yellow ring — Super Like
+  superBtn: {
+    width: 54, height: 54, borderRadius: 27,
+    backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: '#00D8FF',
+    shadowColor: '#00D8FF', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6, elevation: 4,
   },
-  stealBtnLocked: { backgroundColor: '#F3F4F6' },
-  stealBtnText: { fontSize: 22 },
+  superBtnText: { fontSize: 22, color: '#00D8FF' },
+  // Green ring — Like
   likeBtn: {
-    width: 60, height: 60, borderRadius: 30,
-    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 4,
+    width: 64, height: 64, borderRadius: 32,
+    backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: '#01DF8B',
+    shadowColor: '#01DF8B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 5,
   },
-  likeBtnText: { fontSize: 24, color: COLORS.primary },
+  likeBtnText: { fontSize: 28, color: '#01DF8B' },
+  // Purple ring — Steal
+  stealBtn: {
+    width: 54, height: 54, borderRadius: 27,
+    backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: '#A78BFA',
+    shadowColor: '#A78BFA', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6, elevation: 4,
+  },
+  stealBtnLocked: { borderColor: COLORS.lightGray },
+  stealBtnText: { fontSize: 20 },
 });

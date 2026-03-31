@@ -1,8 +1,9 @@
 import React, { useCallback, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, Image,
+  View, Text, StyleSheet, FlatList, Image, ScrollView,
   TouchableOpacity, RefreshControl, ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -52,114 +53,207 @@ export const MatchesScreen: React.FC = () => {
     return match.user1Id === user.id ? match.User2 : match.User1;
   };
 
-  const active = matches.filter((m) => m.status !== 'broken');
-  const broken = matches.filter((m) => m.status === 'broken');
+  const active = matches.filter((m: Match) => m.status !== 'broken');
+  const broken = matches.filter((m: Match) => m.status === 'broken');
+  const newMatches = active.filter((m: Match) => m.status === 'matched_locked').slice(0, 12);
+  const conversationMatches = active.filter((m: Match) => m.status !== 'matched_locked');
 
-  const renderMatch = ({ item }: { item: Match }) => {
-    const partner = getPartner(item);
-    const config = MATCH_STATUS_CONFIG[item.status];
+  const renderLikedMeItem = ({ item }: { item: User }) => {
+    const age = item.dateOfBirth
+      ? Math.floor((Date.now() - new Date(item.dateOfBirth).getTime()) / 3.156e10)
+      : null;
     return (
-      <TouchableOpacity
-        style={styles.card}
-        onPress={() => navigation.navigate('MatchDetails', { matchId: item.id })}
-        activeOpacity={0.85}
-      >
-        {partner?.profilePhoto ? (
-          <Image source={{ uri: partner.profilePhoto }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <Text style={{ fontSize: 28 }}>👤</Text>
-          </View>
-        )}
-        <View style={styles.info}>
-          <Text style={styles.name}>{partner?.firstName} {partner?.lastName}</Text>
-          <Text style={[styles.status, { color: config?.color }]}>{config?.label}</Text>
-          {item.compatibilityScore != null && (
-            <Text style={styles.compat}>⚡ {item.compatibilityScore}% compatible</Text>
-          )}
+      <View style={styles.msgRow}>
+        <View style={styles.avatarWrap}>
+          {item.profilePhoto
+            ? <Image source={{ uri: item.profilePhoto }} style={styles.msgAvatar} />
+            : <View style={[styles.msgAvatar, styles.avatarPlaceholder]}><Text style={{ fontSize: 24 }}>👤</Text></View>}
         </View>
-        <View style={styles.action}>
-          {config?.action ? (
-            <Text style={[styles.actionLabel, { color: config.color }]}>{config.action}</Text>
-          ) : null}
-          <Text style={styles.arrow}>›</Text>
+        <View style={styles.msgBody}>
+          <Text style={styles.msgName}>{item.firstName} {item.lastName}{age ? `, ${age}` : ''}</Text>
+          {item.subscriptionTier === 'gold' && <Text style={styles.goldBadge}>🥇 Gold</Text>}
         </View>
-      </TouchableOpacity>
+        <Text style={styles.msgArrow}>›</Text>
+      </View>
     );
   };
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.title}>My Matches 💘</Text>
+      {/* Tinder-style gradient header */}
+      <LinearGradient
+        colors={[COLORS.gradientStart, COLORS.gradientEnd]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+        style={styles.header}
+      >
+        <Text style={styles.headerTitle}>💘 Matches</Text>
 
-      {/* Tab switcher */}
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, tab === 'matches' && styles.tabActive]}
-          onPress={() => setTab('matches')}
-        >
-          <Text style={[styles.tabText, tab === 'matches' && styles.tabTextActive]}>
-            Matches {active.length > 0 ? `(${active.length})` : ''}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, tab === 'liked-me' && styles.tabActive]}
-          onPress={() => {
-            setTab('liked-me');
-            loadLikedMe();
-          }}
-        >
-          <Text style={[styles.tabText, tab === 'liked-me' && styles.tabTextActive]}>
-            Liked Me {canSeeLikedMe && likedMe.length > 0 ? `(${likedMe.length})` : ''} {!canSeeLikedMe ? '🔒' : ''}
-          </Text>
-        </TouchableOpacity>
-      </View>
+        {/* Tinder-style tab pills */}
+        <View style={styles.tabRow}>
+          <TouchableOpacity
+            style={[styles.tabPill, tab === 'matches' && styles.tabPillActive]}
+            onPress={() => setTab('matches')}
+          >
+            <Text style={[styles.tabPillText, tab === 'matches' && styles.tabPillTextActive]}>
+              Matches{active.length > 0 ? ` (${active.length})` : ''}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabPill, tab === 'liked-me' && styles.tabPillActive]}
+            onPress={() => { setTab('liked-me'); loadLikedMe(); }}
+          >
+            <Text style={[styles.tabPillText, tab === 'liked-me' && styles.tabPillTextActive]}>
+              Liked Me {!canSeeLikedMe ? '🔒' : likedMe.length > 0 ? `(${likedMe.length})` : ''}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
 
-      {/* ── Matches tab ── */}
+      {/* ── MATCHES TAB ── */}
       {tab === 'matches' && (
-        <FlatList
-          data={active}
-          keyExtractor={(m) => m.id}
-          renderItem={renderMatch}
-          contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => dispatch(fetchMatches())} tintColor={COLORS.primary} />}
-          ListEmptyComponent={
-            !isLoading ? (
-              <View style={styles.empty}>
-                <Text style={styles.emptyEmoji}>💘</Text>
-                <Text style={styles.emptyText}>No matches yet!</Text>
-                <Text style={styles.emptyHint}>Start swiping in Discover to find matches.</Text>
-              </View>
-            ) : null
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={isLoading} onRefresh={() => dispatch(fetchMatches())} tintColor={COLORS.primary} />
           }
-          ListFooterComponent={
-            broken.length > 0 ? (
-              <>
-                <Text style={styles.sectionLabel}>Past Connections</Text>
-                {broken.map((m) => (
-                  <View key={m.id}>
-                    {renderMatch({ item: m })}
+        >
+          {/* New Matches — horizontal avatar circles */}
+          {newMatches.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>New Matches</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.newMatchRow}>
+                {newMatches.map((match) => {
+                  const partner = getPartner(match);
+                  return (
+                    <TouchableOpacity
+                      key={match.id}
+                      style={styles.newMatchItem}
+                      onPress={() => navigation.navigate('MatchDetails', { matchId: match.id })}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.newMatchAvatarWrap}>
+                        {partner?.profilePhoto
+                          ? <Image source={{ uri: partner.profilePhoto }} style={styles.newMatchAvatar} />
+                          : <View style={[styles.newMatchAvatar, styles.avatarPlaceholder]}><Text style={{ fontSize: 28 }}>👤</Text></View>}
+                        <View style={styles.onlineDot} />
+                      </View>
+                      <Text style={styles.newMatchName} numberOfLines={1}>{partner?.firstName}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Conversations / active matches */}
+          {conversationMatches.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Messages</Text>
+              {conversationMatches.map((item) => {
+                const partner = getPartner(item);
+                const config = MATCH_STATUS_CONFIG[item.status];
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.msgRow}
+                    onPress={() => navigation.navigate('MatchDetails', { matchId: item.id })}
+                    activeOpacity={0.85}
+                  >
+                    <View style={styles.avatarWrap}>
+                      {partner?.profilePhoto
+                        ? <Image source={{ uri: partner.profilePhoto }} style={styles.msgAvatar} />
+                        : <View style={[styles.msgAvatar, styles.avatarPlaceholder]}><Text style={{ fontSize: 24 }}>👤</Text></View>}
+                    </View>
+                    <View style={styles.msgBody}>
+                      <Text style={styles.msgName}>{partner?.firstName} {partner?.lastName}</Text>
+                      <Text style={[styles.msgStatus, { color: config?.color }]}>{config?.label}</Text>
+                      {item.compatibilityScore != null && (
+                        <Text style={styles.msgCompat}>⚡ {item.compatibilityScore}% match</Text>
+                      )}
+                    </View>
+                    <Text style={styles.msgArrow}>›</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
+          {/* All-matched locked list */}
+          {newMatches.length > 0 && conversationMatches.length === 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>All Matches</Text>
+              {newMatches.map((item) => {
+                const partner = getPartner(item);
+                const config = MATCH_STATUS_CONFIG[item.status];
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.msgRow}
+                    onPress={() => navigation.navigate('MatchDetails', { matchId: item.id })}
+                    activeOpacity={0.85}
+                  >
+                    <View style={styles.avatarWrap}>
+                      {partner?.profilePhoto
+                        ? <Image source={{ uri: partner.profilePhoto }} style={styles.msgAvatar} />
+                        : <View style={[styles.msgAvatar, styles.avatarPlaceholder]}><Text style={{ fontSize: 24 }}>👤</Text></View>}
+                    </View>
+                    <View style={styles.msgBody}>
+                      <Text style={styles.msgName}>{partner?.firstName} {partner?.lastName}</Text>
+                      <Text style={[styles.msgStatus, { color: config?.color }]}>{config?.label}</Text>
+                    </View>
+                    <Text style={styles.msgArrow}>›</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
+          {active.length === 0 && !isLoading && (
+            <View style={styles.empty}>
+              <Text style={styles.emptyEmoji}>💘</Text>
+              <Text style={styles.emptyText}>No matches yet!</Text>
+              <Text style={styles.emptyHint}>Start swiping in Discover to find matches.</Text>
+            </View>
+          )}
+
+          {/* Past connections */}
+          {broken.length > 0 && (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: COLORS.gray }]}>Past Connections</Text>
+              {broken.map((item) => {
+                const partner = getPartner(item);
+                return (
+                  <View key={item.id} style={[styles.msgRow, styles.msgRowDim]}>
+                    <View style={styles.avatarWrap}>
+                      {partner?.profilePhoto
+                        ? <Image source={{ uri: partner.profilePhoto }} style={[styles.msgAvatar, { opacity: 0.5 }]} />
+                        : <View style={[styles.msgAvatar, styles.avatarPlaceholder]}><Text style={{ fontSize: 24 }}>👤</Text></View>}
+                    </View>
+                    <View style={styles.msgBody}>
+                      <Text style={[styles.msgName, { color: COLORS.gray }]}>{partner?.firstName} {partner?.lastName}</Text>
+                      <Text style={styles.msgStatus}>💔 Broken</Text>
+                    </View>
                   </View>
-                ))}
-              </>
-            ) : null
-          }
-        />
+                );
+              })}
+            </View>
+          )}
+          <View style={{ height: 32 }} />
+        </ScrollView>
       )}
 
-      {/* ── Liked Me tab ── */}
+      {/* ── LIKED ME TAB ── */}
       {tab === 'liked-me' && (
         canSeeLikedMe ? (
           likedMeLoading ? (
-            <View style={styles.center}>
-              <ActivityIndicator size="large" color={COLORS.primary} />
-            </View>
+            <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primary} /></View>
           ) : (
             <FlatList
               data={likedMe}
               keyExtractor={(u) => u.id}
-              contentContainerStyle={styles.list}
+              contentContainerStyle={styles.listContent}
               refreshControl={<RefreshControl refreshing={likedMeLoading} onRefresh={loadLikedMe} tintColor={COLORS.primary} />}
+              renderItem={renderLikedMeItem}
               ListEmptyComponent={
                 <View style={styles.empty}>
                   <Text style={styles.emptyEmoji}>👀</Text>
@@ -167,46 +261,23 @@ export const MatchesScreen: React.FC = () => {
                   <Text style={styles.emptyHint}>When someone likes you, they'll show up here.</Text>
                 </View>
               }
-              renderItem={({ item }) => {
-                const age = item.dateOfBirth
-                  ? Math.floor((Date.now() - new Date(item.dateOfBirth).getTime()) / 3.156e10)
-                  : null;
-                return (
-                  <View style={styles.card}>
-                    {item.profilePhoto ? (
-                      <Image source={{ uri: item.profilePhoto }} style={styles.avatar} />
-                    ) : (
-                      <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                        <Text style={{ fontSize: 28 }}>👤</Text>
-                      </View>
-                    )}
-                    <View style={styles.info}>
-                      <Text style={styles.name}>
-                        {item.firstName} {item.lastName}{age ? `, ${age}` : ''}
-                      </Text>
-                      {item.subscriptionTier === 'gold' && (
-                        <Text style={styles.goldBadge}>🥇 Gold</Text>
-                      )}
-                    </View>
-                    <Text style={styles.arrow}>›</Text>
-                  </View>
-                );
-              }}
             />
           )
         ) : (
-          /* Upgrade prompt for Free users */
           <View style={styles.upgradeWrap}>
             <Text style={styles.upgradeEmoji}>👀</Text>
             <Text style={styles.upgradeTitle}>See Who Liked You</Text>
             <Text style={styles.upgradeBody}>
               Upgrade to Premium or Gold to see everyone who has liked your profile.
             </Text>
-            <TouchableOpacity
-              style={styles.upgradeBtn}
-              onPress={() => navigation.navigate('Subscription')}
-            >
-              <Text style={styles.upgradeBtnText}>Upgrade to Premium ✨</Text>
+            <TouchableOpacity style={styles.upgradeBtn} onPress={() => navigation.navigate('Subscription')}>
+              <LinearGradient
+                colors={[COLORS.gradientStart, COLORS.gradientEnd]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={styles.upgradeBtnGradient}
+              >
+                <Text style={styles.upgradeBtnText}>Upgrade to Premium ✨</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         )
@@ -216,62 +287,75 @@ export const MatchesScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.background },
-  title: { fontSize: 22, fontWeight: '700', color: COLORS.black, padding: 20, paddingTop: 56, paddingBottom: 0 },
-  tabs: {
-    flexDirection: 'row', backgroundColor: '#fff',
-    borderBottomWidth: 1, borderBottomColor: COLORS.lightGray, marginBottom: 4,
+  screen: { flex: 1, backgroundColor: '#fff' },
+
+  // ── Header ──
+  header: {
+    paddingTop: 56, paddingHorizontal: 20, paddingBottom: 12,
   },
-  tab: {
-    flex: 1, paddingVertical: 12, alignItems: 'center',
-    borderBottomWidth: 2, borderBottomColor: 'transparent',
+  headerTitle: { fontSize: 26, fontWeight: '800', color: '#fff', marginBottom: 12 },
+
+  // Tab pills inside gradient header
+  tabRow: { flexDirection: 'row', gap: 10 },
+  tabPill: {
+    paddingHorizontal: 18, paddingVertical: 7,
+    borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.25)',
   },
-  tabActive: { borderBottomColor: COLORS.primary },
-  tabText: { fontSize: 14, fontWeight: '600', color: COLORS.gray },
-  tabTextActive: { color: COLORS.primary },
-  list: { paddingHorizontal: 16, paddingBottom: 32 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  tabPillActive: { backgroundColor: '#fff' },
+  tabPillText: { fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.85)' },
+  tabPillTextActive: { color: COLORS.primary },
+
+  // ── Sections ──
+  section: { paddingHorizontal: 16, paddingTop: 20 },
+  sectionTitle: { fontSize: 13, fontWeight: '700', color: COLORS.gray, letterSpacing: 0.5, marginBottom: 12, textTransform: 'uppercase' },
+
+  // New matches horizontal strip
+  newMatchRow: { paddingRight: 16, gap: 14 },
+  newMatchItem: { alignItems: 'center', width: 72 },
+  newMatchAvatarWrap: { position: 'relative', marginBottom: 6 },
+  newMatchAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 3, borderColor: COLORS.primary },
+  onlineDot: {
+    position: 'absolute', bottom: 2, right: 2,
+    width: 14, height: 14, borderRadius: 7,
+    backgroundColor: '#22C55E', borderWidth: 2, borderColor: '#fff',
+  },
+  newMatchName: { fontSize: 12, color: COLORS.black, fontWeight: '600', textAlign: 'center', maxWidth: 68 },
+
+  // Message-style rows
+  msgRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 12, paddingHorizontal: 16,
+    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    elevation: 2,
   },
-  avatar: { width: 60, height: 60, borderRadius: 30 },
-  avatarPlaceholder: {
-    backgroundColor: COLORS.lightGray,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  info: { flex: 1, marginLeft: 14 },
-  name: { fontSize: 16, fontWeight: '600', color: COLORS.black },
-  status: { fontSize: 12, marginTop: 3 },
-  compat: { fontSize: 11, color: COLORS.gray, marginTop: 2 },
+  msgRowDim: { opacity: 0.5 },
+  avatarWrap: { position: 'relative', marginRight: 14 },
+  msgAvatar: { width: 56, height: 56, borderRadius: 28 },
+  avatarPlaceholder: { backgroundColor: COLORS.lightGray, alignItems: 'center', justifyContent: 'center' },
+  msgBody: { flex: 1 },
+  msgName: { fontSize: 16, fontWeight: '700', color: COLORS.black },
+  msgStatus: { fontSize: 12, color: COLORS.gray, marginTop: 3 },
+  msgCompat: { fontSize: 11, color: COLORS.primary, marginTop: 2, fontWeight: '600' },
+  msgArrow: { fontSize: 26, color: COLORS.lightGray },
   goldBadge: { fontSize: 11, color: '#D97706', fontWeight: '700', marginTop: 3 },
-  action: { alignItems: 'flex-end' },
-  actionLabel: { fontSize: 11, fontWeight: '600', marginBottom: 4 },
-  arrow: { fontSize: 24, color: COLORS.lightGray },
-  empty: { alignItems: 'center', paddingTop: 80 },
-  emptyEmoji: { fontSize: 56, marginBottom: 12 },
-  emptyText: { fontSize: 18, fontWeight: '700', color: COLORS.black },
-  emptyHint: { color: COLORS.gray, marginTop: 6, textAlign: 'center' },
-  sectionLabel: { fontSize: 14, fontWeight: '600', color: COLORS.gray, marginVertical: 12 },
+
+  // List content padding
+  listContent: { paddingBottom: 32 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
+
+  // Empty state
+  empty: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32 },
+  emptyEmoji: { fontSize: 64, marginBottom: 16 },
+  emptyText: { fontSize: 20, fontWeight: '800', color: COLORS.black, textAlign: 'center' },
+  emptyHint: { color: COLORS.gray, marginTop: 8, textAlign: 'center', lineHeight: 20 },
+
   // Upgrade prompt
-  upgradeWrap: {
-    flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32,
-  },
-  upgradeEmoji: { fontSize: 64, marginBottom: 16 },
-  upgradeTitle: { fontSize: 22, fontWeight: '800', color: COLORS.black, marginBottom: 10, textAlign: 'center' },
-  upgradeBody: { fontSize: 15, color: COLORS.gray, textAlign: 'center', lineHeight: 22, marginBottom: 28 },
-  upgradeBtn: {
-    backgroundColor: '#7C3AED', borderRadius: 14,
-    paddingVertical: 14, paddingHorizontal: 32,
-  },
-  upgradeBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  upgradeWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 36 },
+  upgradeEmoji: { fontSize: 72, marginBottom: 20 },
+  upgradeTitle: { fontSize: 24, fontWeight: '800', color: COLORS.black, marginBottom: 12, textAlign: 'center' },
+  upgradeBody: { fontSize: 15, color: COLORS.gray, textAlign: 'center', lineHeight: 22, marginBottom: 32 },
+  upgradeBtn: { borderRadius: 28, overflow: 'hidden' },
+  upgradeBtnGradient: { paddingVertical: 16, paddingHorizontal: 40 },
+  upgradeBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
 });
+

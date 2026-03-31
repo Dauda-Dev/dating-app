@@ -50,9 +50,9 @@ const Stack = createNativeStackNavigator<MainStackParamList>();
 
 const TabIcon = ({ label, focused }: { label: string; focused: boolean }) => {
   const icons: Record<string, string> = {
-    Home: '🏠', Discover: '🔍', Matches: '💘', Profile: '👤',
+    Home: '🏠', Discover: '🔥', Matches: '💬', Profile: '👤',
   };
-  return <Text style={{ fontSize: focused ? 24 : 20, opacity: focused ? 1 : 0.6 }}>{icons[label]}</Text>;
+  return <Text style={{ fontSize: focused ? 22 : 19, opacity: focused ? 1 : 0.55 }}>{icons[label]}</Text>;
 };
 
 const TabNavigator = () => (
@@ -64,12 +64,16 @@ const TabNavigator = () => (
       tabBarInactiveTintColor: COLORS.gray,
       tabBarStyle: {
         borderTopWidth: 0,
-        elevation: 8,
-        shadowOpacity: 0.08,
-        height: 60,
-        paddingBottom: 6,
+        elevation: 12,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        height: 64,
+        paddingBottom: 8,
+        paddingTop: 4,
+        backgroundColor: '#fff',
       },
-      tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+      tabBarLabelStyle: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
     })}
   >
     <Tab.Screen name="Home" component={HomeScreen} />

@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, Image,
   TouchableOpacity, RefreshControl,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -67,18 +68,24 @@ export const HomeScreen: React.FC = () => {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={isLoading} onRefresh={load} tintColor={COLORS.primary} />}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Hello, {user?.firstName} 👋</Text>
-          <Text style={styles.subtitle}>Here's what's happening</Text>
+      {/* Gradient header — Tinder-style */}
+      <LinearGradient
+        colors={[COLORS.gradientStart, COLORS.gradientEnd]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+        style={styles.header}
+      >
+        <View style={styles.headerLeft}>
+          <Text style={styles.greeting}>Hey, {user?.firstName} 👋</Text>
+          <Text style={styles.subtitle}>Here’s what’s happening</Text>
         </View>
-        {user?.profilePhoto ? (
-          <Image source={{ uri: user.profilePhoto }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarPlaceholder}><Text style={{ fontSize: 24 }}>👤</Text></View>
-        )}
-      </View>
+        <TouchableOpacity onPress={() => navigation.navigate('Profile' as any)}>
+          {user?.profilePhoto ? (
+            <Image source={{ uri: user.profilePhoto }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatarPlaceholder}><Text style={{ fontSize: 22 }}>👤</Text></View>
+          )}
+        </TouchableOpacity>
+      </LinearGradient>
 
       {/* Tier banner / upgrade CTA */}
       {tier === 'gold' ? (
@@ -176,15 +183,19 @@ export const HomeScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: 20, paddingTop: 56 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  greeting: { fontSize: 22, fontWeight: '700', color: COLORS.black },
-  subtitle: { fontSize: 14, color: COLORS.gray, marginTop: 2 },
-  avatar: { width: 48, height: 48, borderRadius: 24 },
+  screen: { flex: 1, backgroundColor: '#fff' },
+  content: { padding: 20, paddingTop: 16, backgroundColor: '#fff', flexGrow: 1 },
+  header: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 20, paddingTop: 56, paddingBottom: 20,
+  },
+  headerLeft: { flex: 1 },
+  greeting: { fontSize: 22, fontWeight: '800', color: '#fff' },
+  subtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  avatar: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: '#fff' },
   avatarPlaceholder: {
-    width: 48, height: 48, borderRadius: 24,
-    backgroundColor: COLORS.lightGray, alignItems: 'center', justifyContent: 'center',
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.3)', alignItems: 'center', justifyContent: 'center',
   },
   alertCard: {
     backgroundColor: '#FFF3E0',
