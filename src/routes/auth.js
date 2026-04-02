@@ -115,6 +115,33 @@ router.post('/verify-email', authController.verifyEmail);
 
 /**
  * @swagger
+ * /api/auth/verify-email-otp:
+ *   post:
+ *     summary: Verify email with 6-digit OTP (mobile app flow)
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, code]
+ *             properties:
+ *               email:
+ *                 type: string
+ *               code:
+ *                 type: string
+ *                 description: 6-digit OTP from verification email
+ *     responses:
+ *       200:
+ *         description: Email verified successfully
+ *       400:
+ *         description: Invalid or expired OTP
+ */
+router.post('/verify-email-otp', authController.verifyEmailOtp);
+
+/**
+ * @swagger
  * /api/auth/resend-verification:
  *   post:
  *     summary: Resend email verification link

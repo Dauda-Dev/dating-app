@@ -21,8 +21,8 @@ module.exports = {
         hashed = await bcrypt.hash(password, 10);
       }
 
-      const verificationToken = EmailService.generateToken();
-      const verificationExpires = new Date(Date.now() + (24 * 60 * 60 * 1000)); // 24 hours
+      const verificationToken = EmailService.generateOtp(); // 6-digit code for mobile
+      const verificationExpires = new Date(Date.now() + (10 * 60 * 1000)); // 10 minutes
 
       const user = await db.User.create({
         email,
@@ -37,7 +37,7 @@ module.exports = {
 
       // Send verification email
       try {
-        await EmailService.sendVerificationEmail(email, verificationToken);
+        await EmailService.sendVerificationOtp(email, firstName, verificationToken);
         await EmailService.sendWelcomeEmail(firstName, email);
       } catch (emailErr) {
         console.error('Email send failed:', emailErr);
@@ -79,6 +79,36 @@ module.exports = {
     }
   },
 
+  // Mobile OTP flow — user types 6-digit code shown in email
+  async verifyEmailOtp(req, res, next) {
+    try {
+      const { email, code } = req.body;
+      if (!email || !code) throw createError('Email and code are required', 400);
+
+      const user = await db.User.findOne({ where: { email } });
+      if (!user) throw createError('No account found with this email', 404);
+      if (user.isEmailVerified) return res.json({ success: true, message: 'Email already verified' });
+
+      if (!user.emailVerificationToken || user.emailVerificationToken !== String(code)) {
+        throw createError('Invalid verification code', 400);
+      }
+      if (user.emailVerificationExpires && new Date() > user.emailVerificationExpires) {
+        await user.update({ emailVerificationToken: null, emailVerificationExpires: null });
+        throw createError('Code has expired — request a new one', 400);
+      }
+
+      await user.update({
+        isEmailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
+      });
+
+      return res.json({ success: true, message: 'Email verified successfully' });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async resendVerification(req, res, next) {
     try {
       const { email } = req.body;
@@ -91,17 +121,17 @@ module.exports = {
         return res.json({ message: 'Email is already verified' });
       }
 
-      // Generate new verification token
-      const verificationToken = EmailService.generateToken();
-      const verificationExpires = new Date(Date.now() + (24 * 60 * 60 * 1000)); // 24 hours
+      // Generate new OTP
+      const verificationToken = EmailService.generateOtp();
+      const verificationExpires = new Date(Date.now() + (10 * 60 * 1000)); // 10 minutes
 
       await user.update({
         emailVerificationToken: verificationToken,
         emailVerificationExpires: verificationExpires
       });
 
-      // Send verification email
-      await EmailService.sendVerificationEmail(email, verificationToken);
+      // Send OTP email
+      await EmailService.sendVerificationOtp(email, user.firstName, verificationToken);
 
       return res.json({ message: 'Verification email sent successfully' });
     } catch (err) {

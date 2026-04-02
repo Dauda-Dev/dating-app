@@ -7,7 +7,8 @@ class EmailService {
     this.mg = new Mailgun(formData);
     this.client = this.mg.client({
       username: 'api',
-      key: process.env.MAILGUN_API_KEY
+      key: process.env.MAILGUN_API_KEY,
+      ...(process.env.MAILGUN_BASE_URL && { url: process.env.MAILGUN_BASE_URL }),
     });
     this.domain = process.env.MAILGUN_DOMAIN;
   }
@@ -35,6 +36,12 @@ class EmailService {
     }
   }
 
+  // Generate a 6-digit numeric OTP
+  generateOtp() {
+    return String(Math.floor(100000 + Math.random() * 900000));
+  }
+
+  // Keep old method for web/link-based flows
   async sendVerificationEmail(email, token) {
     const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
     const html = `
@@ -45,8 +52,23 @@ class EmailService {
       <p>${verificationLink}</p>
       <p>This link expires in 24 hours.</p>
     `;
-
     await this.sendEmail(email, 'Verify Your Email Address', html);
+  }
+
+  // Mobile OTP flow — sends a 6-digit code
+  async sendVerificationOtp(email, firstName, otp) {
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+        <h2 style="color:#FF6B9D;margin-bottom:8px;">Hey ${firstName || 'there'} 👋</h2>
+        <p style="color:#444;font-size:15px;">Use the code below to verify your HeartSync account:</p>
+        <div style="background:#f9f9f9;border-radius:16px;padding:28px;text-align:center;margin:24px 0;">
+          <span style="font-size:42px;font-weight:900;letter-spacing:12px;color:#222;">${otp}</span>
+        </div>
+        <p style="color:#888;font-size:13px;">This code expires in <strong>10 minutes</strong>. Don't share it with anyone.</p>
+        <p style="color:#bbb;font-size:12px;">If you didn't create a HeartSync account, you can safely ignore this email.</p>
+      </div>
+    `;
+    await this.sendEmail(email, `${otp} is your HeartSync verification code`, html);
   }
 
   async sendWelcomeEmail(firstName, email) {

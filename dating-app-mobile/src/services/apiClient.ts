@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_ENDPOINTS } from '../constants';
 
-const API_BASE_URL = 'http://192.168.100.3:5000/api'; // Android emulator → localhost
+const API_BASE_URL = 'https://dating-app-xgvv.onrender.com/api'; // Android emulator → localhost
 // For physical device, replace with your machine's LAN IP e.g. http://192.168.x.x:5000/api
 
 class ApiClient {
@@ -77,6 +77,11 @@ class ApiClient {
 
   async verifyEmail(token: string) {
     const r = await this.client.post(API_ENDPOINTS.VERIFY_EMAIL, { token });
+    return r.data;
+  }
+
+  async verifyEmailOtp(email: string, code: string) {
+    const r = await this.client.post(API_ENDPOINTS.VERIFY_EMAIL_OTP, { email, code });
     return r.data;
   }
 
