@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -21,11 +22,26 @@ const videoRoutes = require('./routes/video');
 const dateRoutes = require('./routes/dates');
 const stealRoutes = require('./routes/steals');
 const paymentRoutes = require('./routes/payments');
+const waitlistRoutes = require('./routes/waitlist');
 
 const app = express();
 
+// Static landing page
+app.use(express.static(path.join(__dirname, '../public')));
+
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'fonts.googleapis.com'],
+      fontSrc: ["'self'", 'fonts.gstatic.com'],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      connectSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:'],
+    },
+  },
+}));
 app.use(cors({
   origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : '*',
   credentials: true,
@@ -76,6 +92,7 @@ app.use('/api/video', videoRoutes);
 app.use('/api/dates', dateRoutes);
 app.use('/api/steals', stealRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/waitlist', waitlistRoutes);
 
 // 404
 app.use((req, res, next) => {

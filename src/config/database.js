@@ -48,6 +48,7 @@ db.Like = require('../models/Like')(sequelize, Sequelize.DataTypes);
 db.Match = require('../models/Match')(sequelize, Sequelize.DataTypes);
 db.VideoSession = require('../models/VideoSession')(sequelize, Sequelize.DataTypes);
 db.StealRequest = require('../models/StealRequest')(sequelize, Sequelize.DataTypes);
+db.Waitlist = require('../models/Waitlist')(sequelize);
 
 // Define associations
 // User - Profile (1:1)

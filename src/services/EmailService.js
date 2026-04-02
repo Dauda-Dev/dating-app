@@ -142,6 +142,89 @@ class EmailService {
   generateToken() {
     return crypto.randomBytes(32).toString('hex');
   }
+
+  // ── Waitlist OTP ───────────────────────────────────────────────────────────
+  async sendWaitlistOtp(email, otp) {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <body style="margin:0;padding:0;background:#f8f8f8;font-family:'Helvetica Neue',Arial,sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0;">
+          <tr><td align="center">
+            <table width="520" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+              <!-- Header -->
+              <tr>
+                <td style="background:linear-gradient(135deg,#FF6B9D,#C44569);padding:40px 40px 32px;text-align:center;">
+                  <div style="font-size:36px;margin-bottom:8px;">💗</div>
+                  <div style="font-size:26px;font-weight:800;color:#fff;letter-spacing:-0.5px;">HeartSync</div>
+                  <div style="font-size:13px;color:rgba(255,255,255,0.8);margin-top:4px;">Find your person</div>
+                </td>
+              </tr>
+              <!-- Body -->
+              <tr>
+                <td style="padding:36px 40px;">
+                  <p style="font-size:17px;font-weight:700;color:#1a1a1a;margin:0 0 8px;">Your verification code</p>
+                  <p style="font-size:14px;color:#666;margin:0 0 28px;">Enter this code to confirm your spot on the waitlist. It expires in 10 minutes.</p>
+                  <!-- OTP box -->
+                  <div style="background:linear-gradient(135deg,#FF6B9D,#C44569);border-radius:16px;padding:28px;text-align:center;margin-bottom:28px;">
+                    <div style="font-size:44px;font-weight:800;letter-spacing:12px;color:#fff;font-family:monospace;">${otp}</div>
+                  </div>
+                  <p style="font-size:13px;color:#999;text-align:center;margin:0;">Didn't request this? You can safely ignore it.</p>
+                </td>
+              </tr>
+              <!-- Footer -->
+              <tr>
+                <td style="background:#fafafa;padding:20px 40px;text-align:center;border-top:1px solid #f0f0f0;">
+                  <p style="font-size:12px;color:#aaa;margin:0;">© ${new Date().getFullYear()} HeartSync · Made with 💗</p>
+                </td>
+              </tr>
+            </table>
+          </td></tr>
+        </table>
+      </body>
+      </html>
+    `;
+    await this.sendEmail(email, `${otp} is your HeartSync verification code`, html);
+  }
+
+  // ── Waitlist welcome ───────────────────────────────────────────────────────
+  async sendWaitlistWelcome(email) {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <body style="margin:0;padding:0;background:#f8f8f8;font-family:'Helvetica Neue',Arial,sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0;">
+          <tr><td align="center">
+            <table width="520" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+              <tr>
+                <td style="background:linear-gradient(135deg,#FF6B9D,#C44569);padding:40px 40px 32px;text-align:center;">
+                  <div style="font-size:36px;margin-bottom:8px;">🎉</div>
+                  <div style="font-size:26px;font-weight:800;color:#fff;letter-spacing:-0.5px;">You're in!</div>
+                  <div style="font-size:13px;color:rgba(255,255,255,0.8);margin-top:4px;">HeartSync Waitlist</div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:36px 40px;text-align:center;">
+                  <p style="font-size:16px;color:#1a1a1a;line-height:1.6;margin:0 0 16px;">We've saved your spot. When HeartSync launches, you'll be among the first to know.</p>
+                  <p style="font-size:14px;color:#666;line-height:1.6;margin:0 0 28px;">HeartSync is a new kind of dating app built around real connections — video calls, proper dates, no endless swiping loops.</p>
+                  <div style="background:linear-gradient(135deg,#FF6B9D,#C44569);border-radius:50px;display:inline-block;padding:14px 36px;">
+                    <span style="color:#fff;font-weight:700;font-size:15px;">Watch this space 💗</span>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="background:#fafafa;padding:20px 40px;text-align:center;border-top:1px solid #f0f0f0;">
+                  <p style="font-size:12px;color:#aaa;margin:0;">© ${new Date().getFullYear()} HeartSync · Made with 💗</p>
+                </td>
+              </tr>
+            </table>
+          </td></tr>
+        </table>
+      </body>
+      </html>
+    `;
+    await this.sendEmail(email, "You're on the HeartSync waitlist! 💗", html);
+  }
 }
 
 module.exports = new EmailService();
