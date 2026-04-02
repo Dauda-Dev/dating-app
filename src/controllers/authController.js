@@ -13,7 +13,8 @@ module.exports = {
         throw createError('Missing required fields', 400);
       }
 
-      const existing = await db.User.findOne({ where: { email } });
+      const normalizedEmail = email.trim().toLowerCase();
+      const existing = await db.User.findOne({ where: { email: normalizedEmail } });
       if (existing) throw createError('Email already in use', 409);
 
       let hashed = null;
@@ -25,7 +26,7 @@ module.exports = {
       const verificationExpires = new Date(Date.now() + (10 * 60 * 1000)); // 10 minutes
 
       const user = await db.User.create({
-        email,
+        email: normalizedEmail,
         password: hashed,
         firstName,
         lastName,
@@ -85,7 +86,8 @@ module.exports = {
       const { email, code } = req.body;
       if (!email || !code) throw createError('Email and code are required', 400);
 
-      const user = await db.User.findOne({ where: { email } });
+      const normalizedEmail = email.trim().toLowerCase();
+      const user = await db.User.findOne({ where: { email: normalizedEmail } });
       if (!user) throw createError('No account found with this email', 404);
       if (user.isEmailVerified) return res.json({ success: true, message: 'Email already verified' });
 
@@ -114,7 +116,8 @@ module.exports = {
       const { email } = req.body;
       if (!email) throw createError('Email is required', 400);
 
-      const user = await db.User.findOne({ where: { email } });
+      const normalizedEmail = email.trim().toLowerCase();
+      const user = await db.User.findOne({ where: { email: normalizedEmail } });
       if (!user) throw createError('No account found with this email', 404);
 
       if (user.isEmailVerified) {
@@ -144,7 +147,7 @@ module.exports = {
       const { email, password } = req.body;
       if (!email || !password) throw createError('Missing credentials', 400);
 
-      const user = await db.User.findOne({ where: { email } });
+      const user = await db.User.findOne({ where: { email: email.trim().toLowerCase() } });
       if (!user) throw createError('Invalid credentials', 401);
 
       if (!user.password) throw createError('Password not set for this user', 401);

@@ -138,7 +138,7 @@ export const SignupScreen: React.FC<Props> = ({ navigation }) => {
       gender,
     }));
     if (signup.fulfilled.match(result)) {
-      navigation.navigate('VerifyEmail', { email });
+      navigation.navigate('VerifyEmail', { email: email.trim().toLowerCase() });
     } else {
       Alert.alert('Signup Failed', result.payload as string);
     }
