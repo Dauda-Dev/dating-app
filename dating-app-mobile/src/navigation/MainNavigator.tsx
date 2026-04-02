@@ -76,8 +76,8 @@ const TabNavigator = () => (
       tabBarLabelStyle: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
     })}
   >
-    <Tab.Screen name="Home" component={HomeScreen} />
     <Tab.Screen name="Discover" component={DiscoveryScreen} />
+    <Tab.Screen name="Home" component={HomeScreen} />
     <Tab.Screen name="Matches" component={MatchesScreen} />
     <Tab.Screen name="Profile" component={ProfileScreen} />
   </Tab.Navigator>
