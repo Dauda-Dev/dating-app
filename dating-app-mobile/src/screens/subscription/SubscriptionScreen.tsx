@@ -98,7 +98,7 @@ export const SubscriptionScreen: React.FC = () => {
               // After payment, user taps "Verify" or it auto-verifies via webhook
               Alert.alert(
                 '💳 Payment Ready',
-                'Tap "Open Payment" to complete your purchase. Come back and tap "I've Paid" to verify.',
+                "Tap \"Open Payment\" to complete your purchase. Come back and tap \"I've Paid\" to verify.",
                 [
                   { text: 'Cancel', style: 'cancel' },
                   {
