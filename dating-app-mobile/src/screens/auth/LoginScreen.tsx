@@ -27,6 +27,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
@@ -66,8 +67,9 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleLogin = async () => {
-    if (!email || !password) { Alert.alert('Error', 'Please fill in all fields'); return; }
+    if (!email || !password) { setLoginError('Please fill in all fields'); return; }
     dispatch(clearError());
+    setLoginError('');
     setLoading(true);
     const result = await dispatch(login({ email: email.trim().toLowerCase(), password }));
     setLoading(false);
@@ -76,7 +78,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
       if (payload?.type === 'EMAIL_NOT_VERIFIED') {
         navigation.navigate('VerifyEmail', { email: email.trim().toLowerCase() });
       } else {
-        Alert.alert('Login Failed', typeof payload === 'string' ? payload : payload?.message || 'Login failed');
+        setLoginError(typeof payload === 'string' ? payload : payload?.message || 'Login failed');
       }
     }
   };
@@ -94,7 +96,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               label="Email"
               placeholder="your@email.com"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(t) => { setEmail(t); setLoginError(''); }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -105,7 +107,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               label="Password"
               placeholder="••••••••"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(t) => { setPassword(t); setLoginError(''); }}
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
@@ -117,6 +119,10 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             </TouchableOpacity>
 
             <Button title="Sign In" onPress={handleLogin} loading={loading} style={styles.btn} />
+
+            {!!loginError && (
+              <Text style={styles.loginError}>{loginError}</Text>
+            )}
 
             <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
@@ -173,6 +179,13 @@ const styles = StyleSheet.create({
   forgotWrap: { alignSelf: 'flex-end', marginBottom: 16 },
   forgotText: { color: COLORS.primary, fontSize: 14 },
   btn: { marginTop: 4 },
+  loginError: {
+    color: COLORS.danger,
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 10,
+    lineHeight: 18,
+  },
   dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 16 },
   dividerLine: { flex: 1, height: 1, backgroundColor: '#e5e7eb' },
   dividerText: { marginHorizontal: 12, color: COLORS.gray, fontSize: 13 },

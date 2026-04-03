@@ -153,7 +153,7 @@ module.exports = {
       if (!user.password) throw createError('Password not set for this user', 401);
 
       const match = await bcrypt.compare(password, user.password);
-      if (!match) throw createError('Invalid credentials', 401);
+      if (!match) throw createError('Incorrect password. Use "Forgot password?" to reset it.', 401);
 
       if (!user.isEmailVerified) {
         throw createError('Please verify your email before logging in', 403);
