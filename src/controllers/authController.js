@@ -147,7 +147,7 @@ module.exports = {
       const { email, password } = req.body;
       if (!email || !password) throw createError('Missing credentials', 400);
 
-      const user = await db.User.findOne({ where: { email: email.trim().toLowerCase() } });
+      const user = await db.User.findOne({ where: { email: email.toLowerCase() } });
       if (!user) throw createError('Invalid credentials', 401);
 
       if (!user.password) throw createError('Password not set for this user', 401);
