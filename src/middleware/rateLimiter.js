@@ -3,12 +3,17 @@ const RedisStore = require('rate-limit-redis');
 const redis = require('redis');
 
 // Optional: Use Redis store for distributed rate limiting
+// Only connect when REDIS_URL is explicitly provided (avoids ECONNREFUSED on Render)
 let redisClient;
-try {
-  redisClient = redis.createClient({ url: process.env.REDIS_URL });
-  redisClient.connect().catch(err => console.error('Redis connect failed:', err));
-} catch (err) {
-  console.warn('Redis not available, using memory store for rate limiting');
+if (process.env.REDIS_URL) {
+  try {
+    redisClient = redis.createClient({ url: process.env.REDIS_URL });
+    redisClient.connect().catch(err => console.error('Redis connect failed:', err));
+  } catch (err) {
+    console.warn('Redis not available, using memory store for rate limiting');
+  }
+} else {
+  console.log('REDIS_URL not set — using in-memory rate limiting store.');
 }
 
 /**
