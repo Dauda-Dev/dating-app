@@ -1,7 +1,5 @@
 const db = require('../config/database');
-const EmailService = require('../services/EmailService');
-
-const emailService = new EmailService();
+const emailService = require('../services/EmailService'); // singleton instance
 
 // ── POST /api/waitlist/join ────────────────────────────────────────────────
 // Accepts { email }, sends a 6-digit OTP, upserts row in waitlist table

@@ -26,6 +26,9 @@ const waitlistRoutes = require('./routes/waitlist');
 
 const app = express();
 
+// Trust Render/proxy X-Forwarded-For headers (required for express-rate-limit)
+app.set('trust proxy', 1);
+
 // Static landing page
 app.use(express.static(path.join(__dirname, '../public')));
 

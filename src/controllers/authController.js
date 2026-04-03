@@ -134,7 +134,7 @@ module.exports = {
       });
 
       // Send OTP email
-      await EmailService.sendVerificationOtp(email, user.firstName, verificationToken);
+      await EmailService.sendVerificationOtp(normalizedEmail, user.firstName, verificationToken);
 
       return res.json({ message: 'Verification email sent successfully' });
     } catch (err) {
