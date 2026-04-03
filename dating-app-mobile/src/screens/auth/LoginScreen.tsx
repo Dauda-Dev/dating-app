@@ -97,7 +97,9 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
-              autoComplete="email"
+              autoCorrect={false}
+              autoComplete="off"
+              spellCheck={false}
             />
             <Input
               label="Password"
@@ -105,7 +107,9 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               value={password}
               onChangeText={setPassword}
               secureTextEntry
-              autoComplete="password"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="off"
             />
 
             <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={styles.forgotWrap}>

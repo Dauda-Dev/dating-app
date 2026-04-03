@@ -277,6 +277,9 @@ export const SignupScreen: React.FC<Props> = ({ navigation }) => {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="off"
+                spellCheck={false}
               />
               <View style={styles.passRow}>
                 <TextInput
@@ -286,6 +289,9 @@ export const SignupScreen: React.FC<Props> = ({ navigation }) => {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPass}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="off"
                 />
                 <TouchableOpacity onPress={() => setShowPass((v) => !v)} style={styles.eyeBtn}>
                   <Text style={styles.eyeText}>{showPass ? '🙈' : '👁️'}</Text>
