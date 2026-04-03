@@ -13,14 +13,14 @@ type Props = { navigation: NativeStackNavigationProp<AuthStackParamList, 'Forgot
 export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
 
   const handleSubmit = async () => {
     if (!email) { Alert.alert('Error', 'Please enter your email'); return; }
     setLoading(true);
     try {
       await apiClient.forgotPassword(email.trim().toLowerCase());
-      setSent(true);
+      // Always navigate — backend returns 200 even if email not found (security)
+      navigation.navigate('ResetPassword', { email: email.trim().toLowerCase() });
     } catch {
       Alert.alert('Error', 'Something went wrong. Please try again.');
     } finally {
@@ -38,29 +38,19 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
         <View style={styles.card}>
           <Text style={styles.emoji}>🔑</Text>
           <Text style={styles.title}>Reset Password</Text>
-
-          {sent ? (
-            <View style={styles.sentWrap}>
-              <Text style={styles.sentTitle}>Check your inbox!</Text>
-              <Text style={styles.sentBody}>
-                We've sent password reset instructions to {email}
-              </Text>
-              <Button title="Back to Login" onPress={() => navigation.navigate('Login')} style={styles.btn} />
-            </View>
-          ) : (
-            <>
-              <Text style={styles.desc}>Enter your email and we'll send you a reset link.</Text>
-              <Input
-                label="Email"
-                placeholder="your@email.com"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              <Button title="Send Reset Link" onPress={handleSubmit} loading={loading} />
-            </>
-          )}
+          <Text style={styles.desc}>Enter your email and we'll send you a 6-digit code to reset your password.</Text>
+          <Input
+            label="Email"
+            placeholder="your@email.com"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <Button title="Send Reset Code" onPress={handleSubmit} loading={loading} />
         </View>
       </View>
     </LinearGradient>
@@ -76,8 +66,4 @@ const styles = StyleSheet.create({
   emoji: { fontSize: 48, textAlign: 'center', marginBottom: 8 },
   title: { fontSize: 24, fontWeight: '700', color: COLORS.black, textAlign: 'center', marginBottom: 8 },
   desc: { color: COLORS.gray, fontSize: 14, textAlign: 'center', marginBottom: 24 },
-  sentWrap: { alignItems: 'center' },
-  sentTitle: { fontSize: 18, fontWeight: '700', color: COLORS.success, marginBottom: 8 },
-  sentBody: { color: COLORS.gray, textAlign: 'center', marginBottom: 24 },
-  btn: { width: '100%' },
 });

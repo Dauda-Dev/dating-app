@@ -95,8 +95,8 @@ class ApiClient {
     return r.data;
   }
 
-  async resetPassword(token: string, password: string) {
-    const r = await this.client.post(API_ENDPOINTS.RESET_PASSWORD, { token, password });
+  async resetPassword(email: string, code: string, newPassword: string) {
+    const r = await this.client.post(API_ENDPOINTS.RESET_PASSWORD, { email, code, newPassword });
     return r.data;
   }
 

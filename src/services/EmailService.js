@@ -124,19 +124,43 @@ class EmailService {
     await this.sendEmail(userEmail, 'You Have a New Admirer!', html);
   }
 
-  async sendPasswordResetEmail(email, resetToken) {
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+  async sendPasswordResetEmail(email, firstName, otp) {
     const html = `
-      <h2>Reset Your Password</h2>
-      <p>Click the link below to reset your password:</p>
-      <a href="${resetLink}">Reset Password</a>
-      <p>Or copy and paste this link in your browser:</p>
-      <p>${resetLink}</p>
-      <p>This link expires in 24 hours.</p>
-      <p>If you didn't request this, you can ignore this email.</p>
+      <!DOCTYPE html>
+      <html>
+      <body style="margin:0;padding:0;background:#f8f8f8;font-family:'Helvetica Neue',Arial,sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0;">
+          <tr><td align="center">
+            <table width="520" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+              <tr>
+                <td style="background:linear-gradient(135deg,#FF6B9D,#C44569);padding:40px 40px 32px;text-align:center;">
+                  <div style="font-size:36px;margin-bottom:8px;">🔐</div>
+                  <div style="font-size:26px;font-weight:800;color:#fff;letter-spacing:-0.5px;">HeartSync</div>
+                  <div style="font-size:13px;color:rgba(255,255,255,0.8);margin-top:4px;">Password Reset</div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:36px 40px;">
+                  <p style="font-size:17px;font-weight:700;color:#1a1a1a;margin:0 0 8px;">Hi ${firstName || 'there'} 👋</p>
+                  <p style="font-size:14px;color:#666;margin:0 0 28px;">Use the code below to reset your password. It expires in <strong>10 minutes</strong>.</p>
+                  <div style="background:linear-gradient(135deg,#FF6B9D,#C44569);border-radius:16px;padding:28px;text-align:center;margin-bottom:28px;">
+                    <div style="font-size:44px;font-weight:800;letter-spacing:12px;color:#fff;font-family:monospace;">${otp}</div>
+                  </div>
+                  <p style="font-size:13px;color:#999;text-align:center;margin:0;">Didn't request this? You can safely ignore it — your password won't change.</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="background:#fafafa;padding:20px 40px;text-align:center;border-top:1px solid #f0f0f0;">
+                  <p style="font-size:12px;color:#aaa;margin:0;">© ${new Date().getFullYear()} HeartSync · Made with 💗</p>
+                </td>
+              </tr>
+            </table>
+          </td></tr>
+        </table>
+      </body>
+      </html>
     `;
-
-    await this.sendEmail(email, 'Reset Your Password', html);
+    await this.sendEmail(email, `${otp} — your HeartSync password reset code`, html);
   }
 
   generateToken() {

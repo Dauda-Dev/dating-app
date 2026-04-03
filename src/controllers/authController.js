@@ -355,26 +355,27 @@ module.exports = {
       const { email } = req.body;
       if (!email) throw createError('Email required', 400);
 
-      const user = await db.User.findOne({ where: { email } });
+      const normalizedEmail = email.trim().toLowerCase();
+      const user = await db.User.findOne({ where: { email: normalizedEmail } });
       if (!user) {
-        return res.json({ success: true, message: 'If email exists, password reset link sent' });
+        return res.json({ success: true, message: 'If that email exists, a reset code has been sent' });
       }
 
-      const resetToken = EmailService.generateToken();
-      const resetExpires = new Date(Date.now() + 60 * 60 * 1000);
+      const otp = EmailService.generateOtp(); // 6-digit code
+      const resetExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
       await user.update({
-        passwordResetToken: resetToken,
+        passwordResetToken: otp,
         passwordResetExpires: resetExpires
       });
 
       try {
-        await EmailService.sendPasswordResetEmail(email, user.firstName, resetToken);
+        await EmailService.sendPasswordResetEmail(normalizedEmail, user.firstName, otp);
       } catch (emailErr) {
         console.error('Password reset email failed:', emailErr);
       }
 
-      return res.json({ success: true, message: 'If email exists, password reset link sent' });
+      return res.json({ success: true, message: 'If that email exists, a reset code has been sent' });
     } catch (err) {
       next(err);
     }
@@ -382,23 +383,21 @@ module.exports = {
 
   async resetPassword(req, res, next) {
     try {
-      const { token, newPassword } = req.body;
-      if (!token || !newPassword) throw createError('Token and password required', 400);
+      const { email, code, newPassword } = req.body;
+      if (!email || !code || !newPassword) throw createError('Email, code and new password are required', 400);
 
       if (newPassword.length < 8) throw createError('Password must be at least 8 characters', 400);
 
-      const user = await db.User.findOne({
-        where: { passwordResetToken: token }
-      });
+      const normalizedEmail = email.trim().toLowerCase();
+      const user = await db.User.findOne({ where: { email: normalizedEmail } });
 
-      if (!user) throw createError('Invalid or expired reset token', 400);
+      if (!user || !user.passwordResetToken) throw createError('Invalid or expired reset code', 400);
+
+      if (user.passwordResetToken !== String(code)) throw createError('Invalid reset code', 400);
 
       if (new Date() > user.passwordResetExpires) {
-        await user.update({
-          passwordResetToken: null,
-          passwordResetExpires: null
-        });
-        throw createError('Password reset token has expired', 400);
+        await user.update({ passwordResetToken: null, passwordResetExpires: null });
+        throw createError('Reset code has expired — request a new one', 400);
       }
 
       const hashedPassword = await bcrypt.hash(newPassword, 10);
