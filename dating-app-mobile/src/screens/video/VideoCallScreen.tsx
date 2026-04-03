@@ -133,6 +133,15 @@ export const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
           setParticipants({ ...call.participants() });
         });
 
+        // Re-snapshot participants when tracks start/stop so video renders
+        call.on('track-started', () => {
+          setParticipants({ ...call.participants() });
+        });
+
+        call.on('track-stopped', () => {
+          setParticipants({ ...call.participants() });
+        });
+
         call.on('left-meeting', () => {
           setCallState('ended');
         });
@@ -228,9 +237,8 @@ export const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
         ) : remoteParticipants.length > 0 && DailyMediaView ? (
           <DailyMediaView
-            sessionId={remoteParticipants[0].session_id}
-            videoTrackState={remoteParticipants[0].tracks?.video}
-            audioTrackState={remoteParticipants[0].tracks?.audio}
+            videoTrack={remoteParticipants[0].tracks?.video?.persistentTrack ?? null}
+            audioTrack={remoteParticipants[0].tracks?.audio?.persistentTrack ?? null}
             style={styles.remoteVideo}
           />
         ) : (
@@ -245,9 +253,8 @@ export const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
       {callState === 'joined' && DailyMediaView && participants?.local && (
         <View style={styles.localContainer}>
           <DailyMediaView
-            sessionId={participants.local.session_id}
-            videoTrackState={participants.local.tracks?.video}
-            audioTrackState={participants.local.tracks?.audio}
+            videoTrack={participants.local.tracks?.video?.persistentTrack ?? null}
+            audioTrack={participants.local.tracks?.audio?.persistentTrack ?? null}
             mirror
             style={styles.localVideo}
           />
