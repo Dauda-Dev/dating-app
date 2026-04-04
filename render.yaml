@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: heartsync-api
+    name: ovally-api
     runtime: node
     region: oregon
     plan: free           # change to 'starter' or higher for production
@@ -17,7 +17,7 @@ services:
       # Injected automatically by Render when linked to the database below
       - key: DATABASE_URL
         fromDatabase:
-          name: heartsync-db
+          name: ovally-db
           property: connectionString
 
       # ── Secrets: fill these in the Render dashboard ──────────────────────
@@ -69,7 +69,7 @@ services:
       # Optional Redis (add a Redis service and link here if desired)
       # - key: REDIS_URL
       #   fromService:
-      #     name: heartsync-redis
+      #     name: ovally-redis
       #     type: redis
       #     property: connectionString
 
@@ -84,8 +84,8 @@ services:
         value: 3600
 
 databases:
-  - name: heartsync-db
-    databaseName: heartsync
-    user: heartsync_user
+  - name: ovally-db
+    databaseName: ovally
+    user: ovally_user
     region: oregon
     plan: free             # change to 'starter' for persistent storage

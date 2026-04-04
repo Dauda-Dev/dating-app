@@ -26,7 +26,7 @@ const options = {
         description: 'Development Server'
       },
       {
-        url: process.env.RENDER_EXTERNAL_URL || 'https://heartsync-api.onrender.com',
+        url: process.env.RENDER_EXTERNAL_URL || 'https://ovally-api.onrender.com',
         description: 'Production Server'
       }
     ],

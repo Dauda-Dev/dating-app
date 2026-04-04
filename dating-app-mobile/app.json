@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "HeartSync",
+    "name": "Ovally",
     "slug": "dating-app-mobile",
-    "scheme": "heartsync",
+    "scheme": "ovally",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,11 +14,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.heartsync.app",
+      "bundleIdentifier": "com.ovally.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "HeartSync needs camera access for video calls.",
-        "NSMicrophoneUsageDescription": "HeartSync needs microphone access for video calls.",
-        "NSPhotoLibraryUsageDescription": "HeartSync needs photo library access to upload profile photos."
+        "NSCameraUsageDescription": "Ovally needs camera access for video calls.",
+        "NSMicrophoneUsageDescription": "Ovally needs microphone access for video calls.",
+        "NSPhotoLibraryUsageDescription": "Ovally needs photo library access to upload profile photos."
       }
     },
     "android": {
@@ -28,7 +28,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.heartsync.app",
+      "package": "com.ovally.app",
       "permissions": [
         "CAMERA",
         "RECORD_AUDIO",

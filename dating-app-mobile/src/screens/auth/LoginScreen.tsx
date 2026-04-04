@@ -31,7 +31,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-    redirectUri: makeRedirectUri({ scheme: 'heartsync' }),
+    redirectUri: makeRedirectUri({ scheme: 'ovally' }),
   });
 
   React.useEffect(() => {

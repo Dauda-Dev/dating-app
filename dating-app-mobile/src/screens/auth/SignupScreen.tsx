@@ -55,7 +55,7 @@ export const SignupScreen: React.FC<Props> = ({ navigation }) => {
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-    redirectUri: makeRedirectUri({ scheme: 'heartsync' }),
+    redirectUri: makeRedirectUri({ scheme: 'ovally' }),
   });
 
   React.useEffect(() => {
@@ -205,7 +205,7 @@ export const SignupScreen: React.FC<Props> = ({ navigation }) => {
             <ScrollView contentContainerStyle={styles.slideScroll} keyboardShouldPersistTaps="handled">
               <Text style={styles.stepEmoji}>{'\uD83C\uDF82'}</Text>
               <Text style={styles.stepTitle}>When's your birthday?</Text>
-              <Text style={styles.stepSub}>You must be 18+ to use HeartSync</Text>
+              <Text style={styles.stepSub}>You must be 18+ to use Ovally</Text>
               <TextInput
                 style={styles.bigInput}
                 placeholder="YYYY-MM-DD"
