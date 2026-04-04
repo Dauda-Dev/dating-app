@@ -92,6 +92,26 @@ class EmailService {
     await this.sendEmail(userEmail, 'New Match!', html);
   }
 
+  async sendSuperLikeNotification(userEmail, recipientName, senderName) {
+    const html = `
+      <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#fff;border-radius:12px">
+        <h2 style="color:#7C3AED;margin-bottom:8px">⭐ Someone Super-Liked you!</h2>
+        <p style="font-size:16px;color:#374151">
+          <strong>${senderName}</strong> sent you a Super Like on <strong>Ovally</strong> —
+          they're really interested in you!
+        </p>
+        <p style="color:#6B7280;font-size:14px">
+          Open the app to see who it is and swipe back before the moment passes.
+        </p>
+        <a href="https://ovally.app" style="display:inline-block;margin-top:20px;padding:12px 28px;background:#7C3AED;color:#fff;border-radius:8px;text-decoration:none;font-weight:700">
+          Open Ovally
+        </a>
+      </div>
+    `;
+
+    await this.sendEmail(userEmail, `⭐ ${senderName} Super-Liked you on Ovally!`, html);
+  }
+
   async sendVideoCallInvite(userEmail, matchedUserName) {
     const html = `
       <h2>Video Call from ${matchedUserName}</h2>

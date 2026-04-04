@@ -156,6 +156,11 @@ class ApiClient {
     return r.data;
   }
 
+  async undoLastSwipe() {
+    const r = await this.client.post(API_ENDPOINTS.UNDO_SWIPE);
+    return r.data;
+  }
+
   // ── Matches ───────────────────────────────────────────────────────────────
   async getMatches(limit = 20, offset = 0) {
     const r = await this.client.get(API_ENDPOINTS.MY_MATCHES, { params: { limit, offset } });

@@ -43,6 +43,7 @@ export const API_ENDPOINTS = {
   GET_USER: '/discovery/user',
   LIKED_ME: '/discovery/liked-me',
   LIKE_QUOTA: '/discovery/quota',
+  UNDO_SWIPE: '/discovery/undo',
   MY_MATCHES: '/matches',
   MATCH_DETAILS: '/matches',
   REJECT_MATCH: '/matches/reject',

@@ -152,6 +152,32 @@ router.get('/liked-me', authenticateJWT, requireTier('premium', 'gold'), discove
 
 /**
  * @swagger
+ * /api/discovery/undo:
+ *   post:
+ *     summary: Undo last swipe (removes the most recent like/pass)
+ *     tags: [Discovery]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Swipe undone — revertedUserId is the user who reappears in discovery
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 revertedUserId:
+ *                   type: string
+ *                   format: uuid
+ *       404:
+ *         description: Nothing to undo
+ */
+router.post('/undo', authenticateJWT, discoveryController.undo);
+
+/**
+ * @swagger
  * /api/discovery/quota:
  *   get:
  *     summary: Get your daily like quota status

@@ -52,21 +52,26 @@ module.exports = {
         };
       }
       
-      // Send email notifications on match
-      if (result.matched) {
-        try {
-          const fromUser = await MatchService.getMatchById(result.match.id);
-          if (fromUser) {
-            const toUser = fromUser.user1Id === fromUserId ? fromUser.User2 : fromUser.User1;
-            const matchedUser = fromUser.user1Id === fromUserId ? fromUser.User2 : fromUser.User1;
-            
-            if (toUser && toUser.email) {
-              await EmailService.sendMatchNotification(toUser.email, matchedUser.firstName);
+      // Send email notifications on match or super-like
+      try {
+        if (result.matched) {
+          const matchRecord = await MatchService.getMatchById(result.match.id);
+          if (matchRecord) {
+            const toUser = matchRecord.user1Id === fromUserId ? matchRecord.User2 : matchRecord.User1;
+            if (toUser?.email) {
+              await EmailService.sendMatchNotification(toUser.email, toUser.firstName);
             }
           }
-        } catch (emailErr) {
-          console.error('Error sending match notification:', emailErr);
+        } else if (likeType === 'super_like') {
+          // Notify the target that someone super-liked them (Premium/Gold feature feel)
+          const targetUser = await db.User.findByPk(targetUserId, { attributes: ['email', 'firstName'] });
+          const senderUser = await db.User.findByPk(fromUserId, { attributes: ['firstName'] });
+          if (targetUser?.email && senderUser) {
+            await EmailService.sendSuperLikeNotification(targetUser.email, targetUser.firstName, senderUser.firstName);
+          }
         }
+      } catch (emailErr) {
+        console.error('Error sending like/match notification:', emailErr);
       }
       
       return res.json(result);
@@ -95,8 +100,10 @@ module.exports = {
     try {
       const userId = req.userId || req.user?.userId;
       const { limit = 20, offset = 0 } = req.query;
+      const parsedLimit = parseInt(limit, 10);
+      const parsedOffset = parseInt(offset, 10);
 
-      const likes = await db.Like.findAll({
+      const { count, rows: likes } = await db.Like.findAndCountAll({
         where: {
           toUserId: userId,
           likeType: ['like', 'super_like'],
@@ -118,12 +125,49 @@ module.exports = {
           },
         ],
         order: [['createdAt', 'DESC']],
-        limit: parseInt(limit, 10),
-        offset: parseInt(offset, 10),
+        limit: parsedLimit,
+        offset: parsedOffset,
       });
 
-      const users = likes.map((l) => l.FromUser).filter(Boolean);
-      return res.json({ users, total: users.length });
+      const users = likes
+        .filter(l => l.FromUser)
+        .map(l => ({
+          ...l.FromUser.toJSON(),
+          isSuperLike: l.likeType === 'super_like',
+          likedAt: l.createdAt,
+        }));
+
+      return res.json({ users, total: count });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /**
+   * POST /api/discovery/undo
+   * Removes the most recent non-mutual like/reject the user sent,
+   * allowing that person to reappear in discovery.
+   */
+  async undo(req, res, next) {
+    try {
+      const userId = req.userId || req.user?.userId;
+
+      const lastLike = await db.Like.findOne({
+        where: {
+          fromUserId: userId,
+          isMutual: false,
+        },
+        order: [['createdAt', 'DESC']],
+      });
+
+      if (!lastLike) {
+        return res.status(404).json({ error: 'Nothing to undo' });
+      }
+
+      const revertedUserId = lastLike.toUserId;
+      await lastLike.destroy();
+
+      return res.json({ success: true, revertedUserId });
     } catch (err) {
       next(err);
     }

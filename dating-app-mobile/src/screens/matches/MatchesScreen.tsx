@@ -58,7 +58,7 @@ export const MatchesScreen: React.FC = () => {
   const newMatches = active.filter((m: Match) => m.status === 'matched_locked').slice(0, 12);
   const conversationMatches = active.filter((m: Match) => m.status !== 'matched_locked');
 
-  const renderLikedMeItem = ({ item }: { item: User }) => {
+  const renderLikedMeItem = ({ item }: { item: User & { isSuperLike?: boolean; likedAt?: string } }) => {
     const age = item.dateOfBirth
       ? Math.floor((Date.now() - new Date(item.dateOfBirth).getTime()) / 3.156e10)
       : null;
@@ -68,9 +68,17 @@ export const MatchesScreen: React.FC = () => {
           {item.profilePhoto
             ? <Image source={{ uri: item.profilePhoto }} style={styles.msgAvatar} />
             : <View style={[styles.msgAvatar, styles.avatarPlaceholder]}><Text style={{ fontSize: 24 }}>👤</Text></View>}
+          {item.isSuperLike && (
+            <View style={styles.superLikeBadge}>
+              <Text style={{ fontSize: 11 }}>⭐</Text>
+            </View>
+          )}
         </View>
         <View style={styles.msgBody}>
           <Text style={styles.msgName}>{item.firstName} {item.lastName}{age ? `, ${age}` : ''}</Text>
+          {item.isSuperLike
+            ? <Text style={styles.superLikeBadgeText}>⭐ Super Liked you</Text>
+            : <Text style={styles.likedYouText}>💚 Liked you</Text>}
           {item.subscriptionTier === 'gold' && <Text style={styles.goldBadge}>🥇 Gold</Text>}
         </View>
         <Text style={styles.msgArrow}>›</Text>
@@ -338,6 +346,14 @@ const styles = StyleSheet.create({
   msgCompat: { fontSize: 11, color: COLORS.primary, marginTop: 2, fontWeight: '600' },
   msgArrow: { fontSize: 26, color: COLORS.lightGray },
   goldBadge: { fontSize: 11, color: '#D97706', fontWeight: '700', marginTop: 3 },
+  superLikeBadge: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: '#7C3AED', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: '#fff',
+  },
+  superLikeBadgeText: { fontSize: 11, color: '#7C3AED', fontWeight: '700', marginTop: 2 },
+  likedYouText: { fontSize: 11, color: '#059669', fontWeight: '600', marginTop: 2 },
 
   // List content padding
   listContent: { paddingBottom: 32 },

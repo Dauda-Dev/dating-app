@@ -6,7 +6,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { fetchEligibleUsers, likeUser, passUser, removeUserFromDeck } from '../../store/slices/discoverySlice';
+import {
+  fetchEligibleUsers, likeUser, superLikeUser, passUser,
+  removeUserFromDeck, undoSwipe,
+} from '../../store/slices/discoverySlice';
 import { requestSteal } from '../../store/slices/stealSlice';
 import { apiClient } from '../../services/apiClient';
 import { COLORS } from '../../constants';
@@ -30,6 +33,7 @@ export const DiscoveryScreen: React.FC = () => {
   const { user } = useAppSelector((s) => s.auth);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
+  const [isUndoing, setIsUndoing] = useState(false);
 
   const tier = user?.subscriptionTier || 'free';
   const isGold = tier === 'gold';
@@ -91,7 +95,6 @@ export const DiscoveryScreen: React.FC = () => {
     }
 
     setPhotoIndex(0);
-    // Optimistically remove from deck immediately — prevents reappearing on any refresh
     dispatch(removeUserFromDeck(currentUser.id));
     Animated.timing(position, {
       toValue: { x: SCREEN_W + 100, y: 0 },
@@ -101,7 +104,6 @@ export const DiscoveryScreen: React.FC = () => {
       position.setValue({ x: 0, y: 0 });
       const result = await dispatch(likeUser(currentUser.id));
       if (likeUser.fulfilled.match(result)) {
-        // Update quota counter locally
         if (quota && !quota.unlimited && quota.remaining !== null) {
           setQuota((q) => q ? { ...q, remaining: Math.max(0, (q.remaining ?? 1) - 1), used: (q.used ?? 0) + 1 } : q);
         }
@@ -113,7 +115,58 @@ export const DiscoveryScreen: React.FC = () => {
           );
         }
       } else if (likeUser.rejected.match(result)) {
-        // Check if it's a quota error (429)
+        const payload = result.payload as string;
+        if (payload?.includes('limit')) {
+          Alert.alert('Daily Limit Reached', 'Upgrade to Premium or Gold for unlimited likes.');
+        }
+      }
+    });
+  };
+
+  const superSwipe = () => {
+    const currentUser = users[currentIndex];
+    if (!currentUser) return;
+
+    // Super-like shares the same daily quota as regular likes for free tier
+    if (quota && !quota.unlimited && quota.remaining !== null && quota.remaining <= 0) {
+      Alert.alert(
+        '💔 Daily Limit Reached',
+        `Free plan allows ${quota.limit} likes per day. Upgrade to Premium or Gold for unlimited likes.`,
+        [
+          { text: 'Not Now', style: 'cancel' },
+          { text: 'Upgrade ✨', onPress: () => navigation.navigate('Subscription') },
+        ]
+      );
+      return;
+    }
+
+    setPhotoIndex(0);
+    dispatch(removeUserFromDeck(currentUser.id));
+    Animated.timing(position, {
+      toValue: { x: 0, y: -(SCREEN_W + 100) },
+      duration: 280,
+      useNativeDriver: true,
+    }).start(async () => {
+      position.setValue({ x: 0, y: 0 });
+      const result = await dispatch(superLikeUser(currentUser.id));
+      if (superLikeUser.fulfilled.match(result)) {
+        if (quota && !quota.unlimited && quota.remaining !== null) {
+          setQuota((q) => q ? { ...q, remaining: Math.max(0, (q.remaining ?? 1) - 1), used: (q.used ?? 0) + 1 } : q);
+        }
+        if (result.payload.result?.matched) {
+          Alert.alert(
+            "⭐ Super Match!",
+            `You and ${currentUser.firstName} are a match! They'll know you really meant it.`,
+            [{ text: 'Amazing!', style: 'default' }]
+          );
+        } else {
+          Alert.alert(
+            "⭐ Super Like Sent!",
+            `${currentUser.firstName} will see that you super-liked them.`,
+            [{ text: 'Nice!', style: 'default' }]
+          );
+        }
+      } else if (superLikeUser.rejected.match(result)) {
         const payload = result.payload as string;
         if (payload?.includes('limit')) {
           Alert.alert('Daily Limit Reached', 'Upgrade to Premium or Gold for unlimited likes.');
@@ -126,7 +179,6 @@ export const DiscoveryScreen: React.FC = () => {
     const currentUser = users[currentIndex];
     if (!currentUser) return;
     setPhotoIndex(0);
-    // Optimistically remove from deck immediately
     dispatch(removeUserFromDeck(currentUser.id));
     Animated.timing(position, {
       toValue: { x: -(SCREEN_W + 100), y: 0 },
@@ -136,6 +188,16 @@ export const DiscoveryScreen: React.FC = () => {
       position.setValue({ x: 0, y: 0 });
       dispatch(passUser(currentUser.id));
     });
+  };
+
+  const handleUndo = async () => {
+    if (isUndoing) return;
+    setIsUndoing(true);
+    const result = await dispatch(undoSwipe());
+    setIsUndoing(false);
+    if (undoSwipe.rejected.match(result)) {
+      Alert.alert('Nothing to Undo', 'No recent swipe to revert.');
+    }
   };
 
   const rotation = position.x.interpolate({
@@ -292,8 +354,18 @@ export const DiscoveryScreen: React.FC = () => {
           <Text style={styles.passBtnText}>✕</Text>
         </TouchableOpacity>
 
-        {/* Super-like — yellow (available to all, counts as a like) */}
-        <TouchableOpacity style={styles.superBtn} onPress={swipeRight} activeOpacity={0.8}>
+        {/* Undo last swipe — small grey rewind button */}
+        <TouchableOpacity
+          style={[styles.undoBtn, isUndoing && { opacity: 0.4 }]}
+          onPress={handleUndo}
+          activeOpacity={0.8}
+          disabled={isUndoing}
+        >
+          <Text style={styles.undoBtnText}>↺</Text>
+        </TouchableOpacity>
+
+        {/* Super-like — cyan, flies the card upward */}
+        <TouchableOpacity style={styles.superBtn} onPress={superSwipe} activeOpacity={0.8}>
           <Text style={styles.superBtnText}>★</Text>
         </TouchableOpacity>
 
@@ -478,4 +550,14 @@ const styles = StyleSheet.create({
   },
   stealBtnLocked: { borderColor: COLORS.lightGray },
   stealBtnText: { fontSize: 20 },
+
+  // Grey ring — Undo
+  undoBtn: {
+    width: 46, height: 46, borderRadius: 23,
+    backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: '#9CA3AF',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 4, elevation: 3,
+  },
+  undoBtnText: { fontSize: 20, color: '#6B7280', fontWeight: '700' },
 });
