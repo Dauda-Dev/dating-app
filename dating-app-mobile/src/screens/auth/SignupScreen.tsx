@@ -16,6 +16,11 @@ import { AuthStackParamList } from '../../navigation/AuthNavigator';
 
 WebBrowser.maybeCompleteAuthSession();
 
+const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '';
+const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? '';
+const googleConfigured = !!(GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID);
+
 type Props = { navigation: NativeStackNavigationProp<AuthStackParamList, 'Signup'> };
 
 const { width: W } = Dimensions.get('window');
@@ -53,10 +58,16 @@ export const SignupScreen: React.FC<Props> = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-    redirectUri: makeRedirectUri({ scheme: 'ovally' }),
-  });
+  const [request, response, promptAsync] = Google.useAuthRequest(
+    googleConfigured
+      ? {
+          androidClientId: GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID,
+          iosClientId: GOOGLE_IOS_CLIENT_ID || GOOGLE_WEB_CLIENT_ID,
+          webClientId: GOOGLE_WEB_CLIENT_ID,
+          redirectUri: makeRedirectUri({ scheme: 'ovally' }),
+        }
+      : null
+  );
 
   React.useEffect(() => {
     if (response?.type === 'success') {
@@ -310,6 +321,7 @@ export const SignupScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={styles.dividerText}>OR</Text>
                 <View style={styles.dividerLine} />
               </View>
+              {googleConfigured && (
               <TouchableOpacity
                 style={styles.googleBtn}
                 onPress={handleGooglePress}
@@ -320,6 +332,7 @@ export const SignupScreen: React.FC<Props> = ({ navigation }) => {
                   ? <ActivityIndicator size="small" color="#444" />
                   : <><Text style={styles.googleIcon}>G</Text><Text style={styles.googleBtnText}>Continue with Google</Text></>}
               </TouchableOpacity>
+              )}
             </ScrollView>
           </View>
         </ScrollView>
