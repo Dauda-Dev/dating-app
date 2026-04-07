@@ -18,13 +18,16 @@ import { AuthStackParamList } from '../../navigation/AuthNavigator';
 WebBrowser.maybeCompleteAuthSession();
 
 // Google OAuth client IDs — set these as EXPO_PUBLIC_ env vars or inline here.
-// Using a single clientId causes a fatal crash on Android; must use platform-specific IDs.
-const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '';
-const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
-const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? '';
+// expo-auth-session's invariantClientId throws a fatal error if any client ID is undefined.
+// We use a placeholder string so the hook never crashes, and hide the button instead.
+const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || 'unconfigured';
+const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || 'unconfigured';
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || 'unconfigured';
 
-// If no client IDs are configured, Google sign-in will be hidden instead of crashing.
-const googleConfigured = !!(GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID);
+// Show the Google button only when real client IDs are provided.
+const googleConfigured = !(
+  GOOGLE_ANDROID_CLIENT_ID === 'unconfigured' && GOOGLE_WEB_CLIENT_ID === 'unconfigured'
+);
 
 type Props = { navigation: NativeStackNavigationProp<AuthStackParamList, 'Login'> };
 
@@ -38,16 +41,12 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
 
-  const [request, response, promptAsync] = Google.useAuthRequest(
-    googleConfigured
-      ? {
-          androidClientId: GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID,
-          iosClientId: GOOGLE_IOS_CLIENT_ID || GOOGLE_WEB_CLIENT_ID,
-          webClientId: GOOGLE_WEB_CLIENT_ID,
-          redirectUri: makeRedirectUri({ scheme: 'ovally' }),
-        }
-      : null
-  );
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
+    iosClientId: GOOGLE_IOS_CLIENT_ID,
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    redirectUri: makeRedirectUri({ scheme: 'ovally' }),
+  });
 
   React.useEffect(() => {
     if (response?.type === 'success') {

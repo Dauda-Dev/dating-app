@@ -16,10 +16,12 @@ import { AuthStackParamList } from '../../navigation/AuthNavigator';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '';
-const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
-const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? '';
-const googleConfigured = !!(GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID);
+const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || 'unconfigured';
+const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || 'unconfigured';
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || 'unconfigured';
+const googleConfigured = !(
+  GOOGLE_ANDROID_CLIENT_ID === 'unconfigured' && GOOGLE_WEB_CLIENT_ID === 'unconfigured'
+);
 
 type Props = { navigation: NativeStackNavigationProp<AuthStackParamList, 'Signup'> };
 
@@ -58,16 +60,12 @@ export const SignupScreen: React.FC<Props> = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const [request, response, promptAsync] = Google.useAuthRequest(
-    googleConfigured
-      ? {
-          androidClientId: GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID,
-          iosClientId: GOOGLE_IOS_CLIENT_ID || GOOGLE_WEB_CLIENT_ID,
-          webClientId: GOOGLE_WEB_CLIENT_ID,
-          redirectUri: makeRedirectUri({ scheme: 'ovally' }),
-        }
-      : null
-  );
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
+    iosClientId: GOOGLE_IOS_CLIENT_ID,
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    redirectUri: makeRedirectUri({ scheme: 'ovally' }),
+  });
 
   React.useEffect(() => {
     if (response?.type === 'success') {
