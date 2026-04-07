@@ -29,6 +29,7 @@
       }
     },
     "production-apk": {
+      "developmentClient": false,
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
