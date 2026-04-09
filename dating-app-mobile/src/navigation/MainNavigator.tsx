@@ -18,6 +18,9 @@ import { SettingsScreen } from '../screens/settings/SettingsScreen';
 import { StealsScreen } from '../screens/steals/StealsScreen';
 import { SubscriptionScreen } from '../screens/subscription/SubscriptionScreen';
 import { LoadingScreen } from '../components/common/LoadingScreen';
+import { ReportScreen } from '../screens/report/ReportScreen';
+import { AdminScreen } from '../screens/admin/AdminScreen';
+import { AdminReportDetailScreen } from '../screens/admin/AdminReportDetailScreen';
 
 // Lazy-load VideoCallScreen so Daily.co native modules don't block Expo Go bundling
 const VideoCallScreen = lazy(() =>
@@ -45,6 +48,9 @@ export type MainStackParamList = {
   Settings: undefined;
   Steals: undefined;
   Subscription: undefined;
+  Report: { userId: string; userName: string; matchId?: string };
+  Admin: undefined;
+  AdminReportDetail: { reportId: string };
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -95,5 +101,8 @@ export const MainNavigator = () => (
     <Stack.Screen name="Settings" component={SettingsScreen} options={{ presentation: 'card' }} />
     <Stack.Screen name="Steals" component={StealsScreen} options={{ presentation: 'card' }} />
     <Stack.Screen name="Subscription" component={SubscriptionScreen} options={{ presentation: 'card' }} />
+    <Stack.Screen name="Report" component={ReportScreen} options={{ presentation: 'modal' }} />
+    <Stack.Screen name="Admin" component={AdminScreen} options={{ presentation: 'card' }} />
+    <Stack.Screen name="AdminReportDetail" component={AdminReportDetailScreen} options={{ presentation: 'card' }} />
   </Stack.Navigator>
 );

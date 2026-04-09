@@ -127,7 +127,21 @@ export const MatchDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           <Text style={styles.back}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Match Details</Text>
-        <View style={{ width: 60 }} />
+        {partner ? (
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('Report', {
+                userId: partner.id,
+                userName: (partner as any).firstName ?? 'this user',
+                matchId,
+              })
+            }
+          >
+            <Text style={{ fontSize: 22, width: 60, textAlign: 'right' }}>🚩</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 60 }} />
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>

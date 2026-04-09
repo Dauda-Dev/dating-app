@@ -4,6 +4,8 @@ import discoveryReducer from './slices/discoverySlice';
 import matchReducer from './slices/matchSlice';
 import stealReducer from './slices/stealSlice';
 import chatReducer from './slices/chatSlice';
+import tutorialReducer from './slices/tutorialSlice';
+import adminReducer from './slices/adminSlice';
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +14,8 @@ export const store = configureStore({
     matches: matchReducer,
     steals: stealReducer,
     chat: chatReducer,
+    tutorial: tutorialReducer,
+    admin: adminReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

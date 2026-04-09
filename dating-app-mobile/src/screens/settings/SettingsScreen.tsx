@@ -72,6 +72,19 @@ export const SettingsScreen: React.FC = () => {
           <SettingRow icon="🔐" label="Privacy Policy" onPress={() => Alert.alert('Coming soon')} />
         </View>
 
+        {(user as any)?.role === 'admin' || (user as any)?.role === 'moderator' ? (
+          <>
+            <Text style={styles.section}>Admin</Text>
+            <View style={styles.group}>
+              <SettingRow
+                icon="🛡️"
+                label="Admin Panel — Reports"
+                onPress={() => (navigation as any).navigate('Admin')}
+              />
+            </View>
+          </>
+        ) : null}
+
         <Text style={styles.section}>Danger Zone</Text>
         <View style={styles.group}>
           <TouchableOpacity style={[styles.row, styles.rowDanger]} onPress={handleLogout}>

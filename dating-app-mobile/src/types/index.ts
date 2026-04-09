@@ -186,3 +186,73 @@ export interface ChatState {
   unreadCounts: Record<string, number>;
   error: string | null;
 }
+
+// ── Report / Admin ───────────────────────────────────────────────────────────
+
+export type ReportReason =
+  | 'harassment'
+  | 'fake_profile'
+  | 'underage'
+  | 'spam'
+  | 'inappropriate_content'
+  | 'other';
+
+export type ReportStatus = 'pending' | 'reviewed' | 'actioned' | 'dismissed';
+
+export type AdminUserAction =
+  | 'suspend_7d'
+  | 'suspend_30d'
+  | 'suspend_permanent'
+  | 'deactivate'
+  | 'activate';
+
+export interface Report {
+  id: string;
+  reporterId: string;
+  reportedUserId: string;
+  matchId?: string | null;
+  reason: ReportReason;
+  details?: string | null;
+  status: ReportStatus;
+  adminNote?: string | null;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
+  createdAt: string;
+  reporter?: Partial<User & { profile?: Partial<Profile> }>;
+  reportedUser?: Partial<User & { profile?: Partial<Profile> }>;
+  reviewer?: Partial<User>;
+}
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  email: string;
+  isActive: boolean;
+  isSuspended: boolean;
+  suspendedUntil?: string | null;
+  role: 'user' | 'admin' | 'moderator';
+  createdAt: string;
+  profile?: Partial<Profile>;
+}
+
+export interface AdminState {
+  reports: Report[];
+  currentReport: Report | null;
+  users: AdminUser[];
+  pagination: { total: number; page: number; pages: number } | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+export interface TutorialStep {
+  title: string;
+  body: string;
+  emoji: string;
+}
+
+export interface TutorialState {
+  hasSeenTutorial: boolean;
+  isVisible: boolean;
+  currentStep: number;
+  steps: TutorialStep[];
+}

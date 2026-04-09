@@ -24,6 +24,8 @@ const stealRoutes = require('./routes/steals');
 const paymentRoutes = require('./routes/payments');
 const waitlistRoutes = require('./routes/waitlist');
 const chatRoutes = require('./routes/chat');
+const reportRoutes = require('./routes/reports');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 
@@ -98,6 +100,8 @@ app.use('/api/steals', stealRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/waitlist', waitlistRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404
 app.use((req, res, next) => {

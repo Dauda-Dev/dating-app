@@ -14,6 +14,10 @@ import { requestSteal } from '../../store/slices/stealSlice';
 import { apiClient } from '../../services/apiClient';
 import { COLORS } from '../../constants';
 import { DiscoveryUser } from '../../types';
+import { TutorialOverlay } from '../../components/common/TutorialOverlay';
+import { HelpButton } from '../../components/common/HelpButton';
+import { HelpModal } from '../../components/common/HelpModal';
+import { startTutorial, loadTutorialSeen } from '../../store/slices/tutorialSlice';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const SWIPE_THRESHOLD = SCREEN_W * 0.3;
@@ -31,12 +35,23 @@ export const DiscoveryScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const { users, currentIndex, isLoading } = useAppSelector((s) => s.discovery);
   const { user } = useAppSelector((s) => s.auth);
+  const { hasSeenTutorial } = useAppSelector((s) => s.tutorial);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
   const [isUndoing, setIsUndoing] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const tier = user?.subscriptionTier || 'free';
   const isGold = tier === 'gold';
+
+  // Show tutorial on first visit
+  useEffect(() => {
+    dispatch(loadTutorialSeen()).then((action: any) => {
+      if (!action.payload) {
+        dispatch(startTutorial('Discover'));
+      }
+    });
+  }, []);
 
   const loadQuota = useCallback(async () => {
     if (tier === 'premium' || tier === 'gold') {
@@ -250,6 +265,9 @@ export const DiscoveryScreen: React.FC = () => {
 
   return (
     <View style={styles.screen}>
+      <TutorialOverlay />
+      <HelpButton onPress={() => setShowHelp(true)} />
+      <HelpModal visible={showHelp} onClose={() => setShowHelp(false)} currentScreen="Discover" />
       {/* Tinder-style header */}
       <View style={styles.headerRow}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('Settings' as any)}>

@@ -13,6 +13,9 @@ import { apiClient } from '../../services/apiClient';
 import { COLORS, MATCH_STATUS_CONFIG } from '../../constants';
 import { MainStackParamList } from '../../navigation/MainNavigator';
 import { Match, User } from '../../types';
+import { TutorialOverlay } from '../../components/common/TutorialOverlay';
+import { HelpButton } from '../../components/common/HelpButton';
+import { HelpModal } from '../../components/common/HelpModal';
 
 type Nav = NativeStackNavigationProp<MainStackParamList>;
 
@@ -26,6 +29,7 @@ export const MatchesScreen: React.FC = () => {
   const [tab, setTab] = useState<'matches' | 'liked-me'>('matches');
   const [likedMe, setLikedMe] = useState<User[]>([]);
   const [likedMeLoading, setLikedMeLoading] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const tier = user?.subscriptionTier || 'free';
   const canSeeLikedMe = tier === 'premium' || tier === 'gold';
@@ -91,6 +95,9 @@ export const MatchesScreen: React.FC = () => {
 
   return (
     <View style={styles.screen}>
+      <TutorialOverlay />
+      <HelpButton onPress={() => setShowHelp(true)} />
+      <HelpModal visible={showHelp} onClose={() => setShowHelp(false)} currentScreen="Matches" />
       {/* Tinder-style gradient header */}
       <LinearGradient
         colors={[COLORS.gradientStart, COLORS.gradientEnd]}

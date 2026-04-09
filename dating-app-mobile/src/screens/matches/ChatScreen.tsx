@@ -234,6 +234,22 @@ export const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
             {partnerTyping && <Text style={styles.typingLabel}>typing…</Text>}
           </View>
         </View>
+        {/* Report button */}
+        {partner && (
+          <TouchableOpacity
+            style={styles.reportBtn}
+            onPress={() =>
+              navigation.navigate('Report', {
+                userId: partner.id,
+                userName: partner.firstName ?? 'this user',
+                matchId,
+              })
+            }
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.reportBtnText}>🚩</Text>
+          </TouchableOpacity>
+        )}
       </LinearGradient>
 
       {/* Messages list */}
@@ -377,4 +393,10 @@ const styles = StyleSheet.create({
   emptyChatEmoji: { fontSize: 56, marginBottom: 14 },
   emptyChatText: { fontSize: 20, fontWeight: '800', color: '#111827' },
   emptyChatHint: { fontSize: 14, color: '#6B7280', marginTop: 6, textAlign: 'center' },
+  reportBtn: {
+    padding: 6,
+    marginLeft: 8,
+    alignSelf: 'center',
+  },
+  reportBtnText: { fontSize: 22 },
 });

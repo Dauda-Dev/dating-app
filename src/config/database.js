@@ -50,6 +50,7 @@ db.VideoSession = require('../models/VideoSession')(sequelize, Sequelize.DataTyp
 db.StealRequest = require('../models/StealRequest')(sequelize, Sequelize.DataTypes);
 db.Waitlist = require('../models/Waitlist')(sequelize);
 db.Message = require('../models/Message')(sequelize, Sequelize.DataTypes);
+db.Report = require('../models/Report')(sequelize, Sequelize.DataTypes);
 
 // Define associations
 // User - Profile (1:1)
@@ -159,6 +160,14 @@ db.Message.belongsTo(db.User, {
   foreignKey: 'senderId',
   as: 'sender',
 });
+
+// User - Report (1:N) - reporter side
+db.User.hasMany(db.Report, { foreignKey: 'reporterId', as: 'reportsMade' });
+db.Report.belongsTo(db.User, { foreignKey: 'reporterId', as: 'reporter' });
+
+// User - Report (1:N) - reported side
+db.User.hasMany(db.Report, { foreignKey: 'reportedUserId', as: 'reportsReceived' });
+db.Report.belongsTo(db.User, { foreignKey: 'reportedUserId', as: 'reportedUser' });
 
 // Add authenticate method to db object
 db.authenticate = async () => {

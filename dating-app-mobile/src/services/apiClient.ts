@@ -268,6 +268,53 @@ class ApiClient {
     const r = await this.client.get('/chat/unread-counts');
     return r.data;
   }
+
+  // ── Reports ───────────────────────────────────────────────────────────────
+  async submitReport(payload: {
+    reportedUserId: string;
+    reason: string;
+    matchId?: string;
+    details?: string;
+  }) {
+    const r = await this.client.post('/reports', payload);
+    return r.data;
+  }
+
+  async getMyReports() {
+    const r = await this.client.get('/reports/my');
+    return r.data;
+  }
+
+  // ── Admin ─────────────────────────────────────────────────────────────────
+  async getAdminReports(status?: string, page = 1) {
+    const params: Record<string, string | number> = { page };
+    if (status) params.status = status;
+    const r = await this.client.get('/admin/reports', { params });
+    return r.data;
+  }
+
+  async getAdminReportDetail(reportId: string) {
+    const r = await this.client.get(`/admin/reports/${reportId}`);
+    return r.data;
+  }
+
+  async reviewAdminReport(reportId: string, status: string, adminNote?: string) {
+    const r = await this.client.patch(`/admin/reports/${reportId}`, { status, adminNote });
+    return r.data;
+  }
+
+  async getAdminUsers(filter?: string, search?: string, page = 1) {
+    const params: Record<string, string | number> = { page };
+    if (filter) params.filter = filter;
+    if (search) params.search = search;
+    const r = await this.client.get('/admin/users', { params });
+    return r.data;
+  }
+
+  async updateUserStatus(userId: string, action: string) {
+    const r = await this.client.patch(`/admin/users/${userId}/status`, { action });
+    return r.data;
+  }
 }
 
 export const apiClient = new ApiClient();

@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, Image,
   TouchableOpacity, RefreshControl, FlatList,
@@ -13,6 +13,10 @@ import { fetchPendingSteals, fetchSentSteals } from '../../store/slices/stealSli
 import { COLORS, MATCH_STATUS_CONFIG } from '../../constants';
 import { MainStackParamList } from '../../navigation/MainNavigator';
 import { Match } from '../../types';
+import { TutorialOverlay } from '../../components/common/TutorialOverlay';
+import { HelpButton } from '../../components/common/HelpButton';
+import { HelpModal } from '../../components/common/HelpModal';
+import { startTutorial } from '../../store/slices/tutorialSlice';
 
 // ─── Tier config ─────────────────────────────────────────────────────────────
 const TIER_CONFIG = {
@@ -101,7 +105,7 @@ const ActivityItem: React.FC<{
   );
 };
 
-// ─── Main screen ─────────────────────────────────────────────────────────────
+// ─── Main screen ──────────────────────────────────────────────────────────────
 export const HomeScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigation = useNavigation<Nav>();
@@ -109,6 +113,7 @@ export const HomeScreen: React.FC = () => {
   const { matches, isLoading } = useAppSelector((s) => s.matches);
   const { incomingRequests, sentRequests } = useAppSelector((s) => s.steals);
   const scrollY = useRef(new Animated.Value(0)).current;
+  const [showHelp, setShowHelp] = useState(false);
 
   const load = useCallback(() => {
     dispatch(fetchMatches());
@@ -160,6 +165,9 @@ export const HomeScreen: React.FC = () => {
   return (
     <View style={styles.screen}>
       <StatusBar barStyle="light-content" />
+      <TutorialOverlay />
+      <HelpButton onPress={() => setShowHelp(true)} />
+      <HelpModal visible={showHelp} onClose={() => setShowHelp(false)} currentScreen="Home" />
 
       {/* ── Animated shrinking gradient header ── */}
       <Animated.View style={[styles.headerWrap, { height: headerHeight }]}>
