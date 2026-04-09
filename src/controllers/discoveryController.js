@@ -118,7 +118,7 @@ module.exports = {
               {
                 model: db.Profile,
                 as: 'Profile',
-                attributes: ['bio', 'interests', 'hobbies', 'location', 'photos'],
+                attributes: ['bio', 'interests', 'hobbies', 'photos'],
                 required: false,
               },
             ],

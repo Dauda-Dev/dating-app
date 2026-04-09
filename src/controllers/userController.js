@@ -193,7 +193,7 @@ module.exports = {
         include: [{
           model: db.Profile,
           as: 'profile',
-          attributes: ['bio', 'location', 'interests', 'hobbies', 'photos', 'occupation']
+          attributes: ['bio', 'interests', 'hobbies', 'photos', 'occupation']
         }]
       });
 

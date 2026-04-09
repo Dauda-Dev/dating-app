@@ -231,7 +231,7 @@ class StealService {
           include: [{
             model: db.Profile,
             as: 'profile',
-            attributes: ['bio', 'location', 'interests', 'hobbies']
+            attributes: ['bio', 'interests', 'hobbies']
           }]
         }
       ],
@@ -255,7 +255,7 @@ class StealService {
           include: [{
             model: db.Profile,
             as: 'profile',
-            attributes: ['bio', 'location']
+            attributes: ['bio']
           }]
         }
       ],

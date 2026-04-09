@@ -183,7 +183,7 @@ class MatchService {
           include: [{
             model: db.Profile,
             as: 'profile',
-            attributes: ['bio', 'location', 'interests', 'hobbies', 'photos', 'hotTakes']
+            attributes: ['bio', 'interests', 'hobbies', 'photos', 'hotTakes']
           }]
         },
         {
@@ -193,7 +193,7 @@ class MatchService {
           include: [{
             model: db.Profile,
             as: 'profile',
-            attributes: ['bio', 'location', 'interests', 'hobbies', 'photos', 'hotTakes']
+            attributes: ['bio', 'interests', 'hobbies', 'photos', 'hotTakes']
           }]
         }
       ]
