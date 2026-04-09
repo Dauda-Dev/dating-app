@@ -23,6 +23,7 @@ const dateRoutes = require('./routes/dates');
 const stealRoutes = require('./routes/steals');
 const paymentRoutes = require('./routes/payments');
 const waitlistRoutes = require('./routes/waitlist');
+const chatRoutes = require('./routes/chat');
 
 const app = express();
 
@@ -96,6 +97,7 @@ app.use('/api/dates', dateRoutes);
 app.use('/api/steals', stealRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/waitlist', waitlistRoutes);
+app.use('/api/chat', chatRoutes);
 
 // 404
 app.use((req, res, next) => {

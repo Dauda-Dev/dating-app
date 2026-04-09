@@ -237,6 +237,19 @@ class ApiClient {
     const response = await this.client.get(API_ENDPOINTS.PENDING_STEALS);
     return response.data;
   }
+
+  // ── Chat ──────────────────────────────────────────────────────────────────
+  async getChatMessages(matchId: string, before?: string) {
+    const params: Record<string, string> = {};
+    if (before) params.before = before;
+    const response = await this.client.get(`/chat/${matchId}/messages`, { params });
+    return response.data;
+  }
+
+  async getChatUnreadCounts() {
+    const response = await this.client.get('/chat/unread-counts');
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient();

@@ -246,3 +246,21 @@ export interface StealState {
   isLoading: boolean;
   error: string | null;
 }
+
+export interface ChatMessage {
+  id: string;
+  matchId: string;
+  senderId: string;
+  content: string;
+  readAt: string | null;
+  createdAt: string;
+  sender?: Pick<User, 'id' | 'firstName' | 'lastName' | 'profilePhoto'>;
+}
+
+export interface ChatState {
+  messagesByMatch: Record<string, ChatMessage[]>;
+  loadingByMatch: Record<string, boolean>;
+  hasMoreByMatch: Record<string, boolean>;
+  unreadCounts: Record<string, number>;
+  error: string | null;
+}

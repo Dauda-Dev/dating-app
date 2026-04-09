@@ -442,6 +442,18 @@ const MatchDetailsScreen: React.FC = () => {
               </>
             )}
 
+            {/* Chat — unlocks after video call */}
+            {['video_call_completed', 'date_accepted', 'post_date_open'].includes(status) && (
+              <>
+                <p style={{ fontSize: 15, color: COLORS.darkGray, margin: '0 0 4px' }}>
+                  💬 Chat with your match!
+                </p>
+                <Button fullWidth size="large" onClick={() => navigate(`/chat/${matchId}`)} disabled={actionLoading}>
+                  💬 Open Chat
+                </Button>
+              </>
+            )}
+
             {/* Step 2 → Propose date after video call */}
             {status === 'video_call_completed' && (
               <>

@@ -12,6 +12,7 @@ import { ProfileScreen } from '../screens/profile/ProfileScreen';
 
 // Stack-only screens
 import { MatchDetailsScreen } from '../screens/matches/MatchDetailsScreen';
+import { ChatScreen } from '../screens/matches/ChatScreen';
 import { ProfileEditScreen } from '../screens/profile/ProfileEditScreen';
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
 import { StealsScreen } from '../screens/steals/StealsScreen';
@@ -38,6 +39,7 @@ export type MainTabParamList = {
 export type MainStackParamList = {
   Tabs: undefined;
   MatchDetails: { matchId: string };
+  Chat: { matchId: string };
   VideoCall: { matchId: string; roomUrl: string; sessionId: string };
   ProfileEdit: undefined;
   Settings: undefined;
@@ -87,6 +89,7 @@ export const MainNavigator = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="Tabs" component={TabNavigator} />
     <Stack.Screen name="MatchDetails" component={MatchDetailsScreen} options={{ presentation: 'card' }} />
+    <Stack.Screen name="Chat" component={ChatScreen} options={{ presentation: 'card' }} />
     <Stack.Screen name="VideoCall" component={VideoCallScreenWrapped} options={{ presentation: 'fullScreenModal' }} />
     <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} options={{ presentation: 'modal' }} />
     <Stack.Screen name="Settings" component={SettingsScreen} options={{ presentation: 'card' }} />

@@ -3,6 +3,7 @@ import authReducer from './slices/authSlice';
 import discoveryReducer from './slices/discoverySlice';
 import matchReducer from './slices/matchSlice';
 import stealReducer from './slices/stealSlice';
+import chatReducer from './slices/chatSlice';
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     discovery: discoveryReducer,
     matches: matchReducer,
     steals: stealReducer,
+    chat: chatReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

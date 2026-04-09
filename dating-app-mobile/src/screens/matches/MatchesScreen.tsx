@@ -8,6 +8,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchMatches } from '../../store/slices/matchSlice';
+import { loadUnreadCounts } from '../../store/slices/chatSlice';
 import { apiClient } from '../../services/apiClient';
 import { COLORS, MATCH_STATUS_CONFIG } from '../../constants';
 import { MainStackParamList } from '../../navigation/MainNavigator';
@@ -20,6 +21,7 @@ export const MatchesScreen: React.FC = () => {
   const navigation = useNavigation<Nav>();
   const { user } = useAppSelector((s) => s.auth);
   const { matches, isLoading } = useAppSelector((s) => s.matches);
+  const { unreadCounts } = useAppSelector((s) => s.chat);
 
   const [tab, setTab] = useState<'matches' | 'liked-me'>('matches');
   const [likedMe, setLikedMe] = useState<User[]>([]);
@@ -44,6 +46,7 @@ export const MatchesScreen: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       dispatch(fetchMatches());
+      dispatch(loadUnreadCounts());
       if (tab === 'liked-me') loadLikedMe();
     }, [tab, loadLikedMe])
   );
@@ -160,21 +163,32 @@ export const MatchesScreen: React.FC = () => {
               {conversationMatches.map((item) => {
                 const partner = getPartner(item);
                 const config = MATCH_STATUS_CONFIG[item.status];
+                const unread = unreadCounts[item.id] || 0;
+                const canChat = ['video_call_completed', 'date_accepted', 'post_date_open'].includes(item.status);
                 return (
                   <TouchableOpacity
                     key={item.id}
                     style={styles.msgRow}
-                    onPress={() => navigation.navigate('MatchDetails', { matchId: item.id })}
+                    onPress={() => canChat
+                      ? navigation.navigate('Chat', { matchId: item.id })
+                      : navigation.navigate('MatchDetails', { matchId: item.id })}
                     activeOpacity={0.85}
                   >
                     <View style={styles.avatarWrap}>
                       {partner?.profilePhoto
                         ? <Image source={{ uri: partner.profilePhoto }} style={styles.msgAvatar} />
                         : <View style={[styles.msgAvatar, styles.avatarPlaceholder]}><Text style={{ fontSize: 24 }}>👤</Text></View>}
+                      {unread > 0 && (
+                        <View style={styles.unreadBadge}>
+                          <Text style={styles.unreadBadgeText}>{unread > 99 ? '99+' : unread}</Text>
+                        </View>
+                      )}
                     </View>
                     <View style={styles.msgBody}>
                       <Text style={styles.msgName}>{partner?.firstName} {partner?.lastName}</Text>
-                      <Text style={[styles.msgStatus, { color: config?.color }]}>{config?.label}</Text>
+                      <Text style={[styles.msgStatus, { color: config?.color }]}>
+                        {canChat ? (unread > 0 ? `${unread} new message${unread > 1 ? 's' : ''}` : config?.label) : config?.label}
+                      </Text>
                       {item.compatibilityScore != null && (
                         <Text style={styles.msgCompat}>⚡ {item.compatibilityScore}% match</Text>
                       )}
@@ -340,6 +354,15 @@ const styles = StyleSheet.create({
   avatarWrap: { position: 'relative', marginRight: 14 },
   msgAvatar: { width: 56, height: 56, borderRadius: 28 },
   avatarPlaceholder: { backgroundColor: COLORS.lightGray, alignItems: 'center', justifyContent: 'center' },
+  unreadBadge: {
+    position: 'absolute', top: -2, right: -2,
+    minWidth: 20, height: 20, borderRadius: 10,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2, borderColor: '#fff',
+  },
+  unreadBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
   msgBody: { flex: 1 },
   msgName: { fontSize: 16, fontWeight: '700', color: COLORS.black },
   msgStatus: { fontSize: 12, color: COLORS.gray, marginTop: 3 },

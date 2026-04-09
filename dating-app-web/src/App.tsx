@@ -23,6 +23,7 @@ import ProfileScreen from './screens/profile/ProfileScreen';
 import ProfileEditScreen from './screens/profile/ProfileEditScreen';
 import MatchesScreen from './screens/matches/MatchesScreen';
 import MatchDetailsScreen from './screens/matches/MatchDetailsScreen';
+import ChatScreen from './screens/matches/ChatScreen';
 import VideoCallScreen from './screens/video/VideoCallScreen';
 import DateProposalScreen from './screens/dating/DateProposalScreen';
 import DateAcceptanceScreen from './screens/dating/DateAcceptanceScreen';
@@ -82,6 +83,7 @@ const AppContent: React.FC = () => {
             <Route path="discovery" element={<DiscoveryScreen />} />
             <Route path="matches" element={<MatchesScreen />} />
             <Route path="matches/:matchId" element={<MatchDetailsScreen />} />
+            <Route path="chat/:matchId" element={<ChatScreen />} />
             <Route path="profile" element={<ProfileScreen />} />
             <Route path="profile/edit" element={<ProfileEditScreen />} />
             <Route path="video/:sessionId" element={<VideoCallScreen />} />

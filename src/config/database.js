@@ -49,6 +49,7 @@ db.Match = require('../models/Match')(sequelize, Sequelize.DataTypes);
 db.VideoSession = require('../models/VideoSession')(sequelize, Sequelize.DataTypes);
 db.StealRequest = require('../models/StealRequest')(sequelize, Sequelize.DataTypes);
 db.Waitlist = require('../models/Waitlist')(sequelize);
+db.Message = require('../models/Message')(sequelize, Sequelize.DataTypes);
 
 // Define associations
 // User - Profile (1:1)
@@ -139,6 +140,24 @@ db.Match.hasMany(db.StealRequest, {
 db.StealRequest.belongsTo(db.Match, {
   foreignKey: 'currentMatchId',
   as: 'currentMatch',
+});
+
+// Match - Message (1:N) — CASCADE delete handled at DB level
+db.Match.hasMany(db.Message, {
+  foreignKey: 'matchId',
+  as: 'messages',
+});
+db.Message.belongsTo(db.Match, {
+  foreignKey: 'matchId',
+  as: 'match',
+});
+db.User.hasMany(db.Message, {
+  foreignKey: 'senderId',
+  as: 'sentMessages',
+});
+db.Message.belongsTo(db.User, {
+  foreignKey: 'senderId',
+  as: 'sender',
 });
 
 // Add authenticate method to db object

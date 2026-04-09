@@ -255,6 +255,19 @@ class ApiClient {
     const r = await this.client.post(API_ENDPOINTS.GOOGLE_MOBILE_AUTH, { idToken });
     return r.data;
   }
+
+  // ── Chat ──────────────────────────────────────────────────────────────────
+  async getChatMessages(matchId: string, before?: string) {
+    const params: Record<string, string> = {};
+    if (before) params.before = before;
+    const r = await this.client.get(`/chat/${matchId}/messages`, { params });
+    return r.data;
+  }
+
+  async getChatUnreadCounts() {
+    const r = await this.client.get('/chat/unread-counts');
+    return r.data;
+  }
 }
 
 export const apiClient = new ApiClient();

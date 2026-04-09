@@ -164,3 +164,25 @@ export interface StealState {
   isSentLoading: boolean;
   error: string | null;
 }
+
+export interface ChatMessage {
+  id: string;
+  matchId: string;
+  senderId: string;
+  content: string;
+  readAt: string | null;
+  createdAt: string;
+  sender?: Pick<User, 'id' | 'firstName' | 'lastName' | 'profilePhoto'>;
+}
+
+export interface ChatState {
+  /** messages keyed by matchId */
+  messagesByMatch: Record<string, ChatMessage[]>;
+  /** whether we're loading history for a given matchId */
+  loadingByMatch: Record<string, boolean>;
+  /** whether there are more (older) messages to load */
+  hasMoreByMatch: Record<string, boolean>;
+  /** unread counts keyed by matchId */
+  unreadCounts: Record<string, number>;
+  error: string | null;
+}

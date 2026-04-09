@@ -1,6 +1,8 @@
+const http = require('http');
 const app = require('./app');
 const db = require('./config/database');
 const { exec } = require('child_process');
+const { initSocketService } = require('./services/socketService');
 
 const PORT = process.env.PORT || 3000;
 
@@ -24,8 +26,13 @@ async function start() {
     await db.sequelize.authenticate();
     console.log('Database connected.');
 
+    // Create HTTP server and attach Socket.io
+    const httpServer = http.createServer(app);
+    const io = initSocketService(httpServer);
+    app.set('io', io); // make io accessible in controllers if needed
+
     // Bind the port FIRST so Render / health checks can reach us immediately
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       console.log(`Server listening on port ${PORT}`);
     });
 

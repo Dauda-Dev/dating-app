@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchMatches } from '../../store/slices/matchSlice';
+import { loadUnreadCounts } from '../../store/slices/chatSlice';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import { COLORS, MATCH_STATUS_CONFIG } from '../../constants';
@@ -81,9 +82,13 @@ const MatchesScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const { matches, isLoading } = useAppSelector(state => state.match);
   const { user } = useAppSelector(state => state.auth);
+  const { unreadCounts } = useAppSelector(state => state.chat) as import('../../types').ChatState;
+
+  const CHAT_STATUSES = ['video_call_completed', 'date_accepted', 'post_date_open'];
 
   useEffect(() => {
     dispatch(fetchMatches({ limit: 50 }));
+    dispatch(loadUnreadCounts());
   }, [dispatch]);
 
   const getPartner = (match: any) => {
@@ -137,28 +142,48 @@ const MatchesScreen: React.FC = () => {
     <Container>
       <Title>💘 Matches ({matches.length})</Title>
       <MatchList>
-        {matches.map(match => (
-          <MatchCard 
-            key={match.id} 
-            hover={true}
-            onClick={() => navigate(`/matches/${match.id}`)}
-          >
-            {getPartnerPhoto(match) ? (
-              <Avatar style={{ backgroundImage: `url(${getPartnerPhoto(match)})`, backgroundSize: 'cover', backgroundPosition: 'center', fontSize: 0 }} />
-            ) : (
-              <Avatar>💕</Avatar>
-            )}
-            <MatchInfo>
-              <MatchName>{getPartnerName(match)}</MatchName>
-              <MatchStatus color={MATCH_STATUS_CONFIG[match.status]?.color || COLORS.primary}>
-                {MATCH_STATUS_CONFIG[match.status]?.label || match.status}
-              </MatchStatus>
-              <MatchDate>
-                Matched on {formatDate(match.matchedAt || match.createdAt)}
-              </MatchDate>
-            </MatchInfo>
-          </MatchCard>
-        ))}
+        {matches.map(match => {
+          const canChat = CHAT_STATUSES.includes(match.status);
+          const unread = unreadCounts[match.id] || 0;
+          return (
+            <MatchCard 
+              key={match.id} 
+              hover={true}
+              onClick={() => canChat ? navigate(`/chat/${match.id}`) : navigate(`/matches/${match.id}`)}
+            >
+              <div style={{ position: 'relative' }}>
+                {getPartnerPhoto(match) ? (
+                  <Avatar style={{ backgroundImage: `url(${getPartnerPhoto(match)})`, backgroundSize: 'cover', backgroundPosition: 'center', fontSize: 0 }} />
+                ) : (
+                  <Avatar>💕</Avatar>
+                )}
+                {unread > 0 && (
+                  <div style={{
+                    position: 'absolute', top: -4, right: -4,
+                    background: COLORS.primary, color: '#fff',
+                    borderRadius: '50%', width: 20, height: 20,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 10, fontWeight: 700, border: '2px solid #fff',
+                  }}>
+                    {unread > 99 ? '99+' : unread}
+                  </div>
+                )}
+              </div>
+              <MatchInfo>
+                <MatchName>{getPartnerName(match)}</MatchName>
+                <MatchStatus color={MATCH_STATUS_CONFIG[match.status]?.color || COLORS.primary}>
+                  {unread > 0 ? `${unread} new message${unread > 1 ? 's' : ''}` : (MATCH_STATUS_CONFIG[match.status]?.label || match.status)}
+                </MatchStatus>
+                <MatchDate>
+                  Matched on {formatDate(match.matchedAt || match.createdAt)}
+                </MatchDate>
+              </MatchInfo>
+              {canChat && (
+                <div style={{ fontSize: 22, color: COLORS.primary }}>💬</div>
+              )}
+            </MatchCard>
+          );
+        })}
       </MatchList>
     </Container>
   );

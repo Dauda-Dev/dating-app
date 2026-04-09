@@ -182,6 +182,15 @@ export const MatchDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           <Text style={[styles.statusText, { color: config?.color }]}>{config?.label}</Text>
         </View>
 
+        {/* Chat section — unlocks after video call */}
+        {['video_call_completed', 'date_accepted', 'post_date_open'].includes(currentMatch.status) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>💬 Chat</Text>
+            <Text style={styles.sectionSub}>Your video call is done — start chatting!</Text>
+            <Button title="Open Chat 💬" onPress={() => navigation.navigate('Chat', { matchId })} />
+          </View>
+        )}
+
         {/* Video call section */}
         {(canStartCall || callActive) && (
           <View style={styles.section}>
