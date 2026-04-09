@@ -8,9 +8,12 @@ RUN npm install --omit=dev
 
 COPY . .
 
+# Make entrypoint executable
+RUN chmod +x docker-entrypoint.sh
+
 ENV NODE_ENV=production
 ENV PORT=10000
 
 EXPOSE 10000
 
-CMD [ "node", "src/server.js" ]
+ENTRYPOINT ["sh", "docker-entrypoint.sh"]
