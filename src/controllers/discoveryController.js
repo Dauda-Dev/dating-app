@@ -8,8 +8,29 @@ module.exports = {
   async eligibleUsers(req, res, next) {
     try {
       const userId = req.userId || req.user?.userId;
-      const { limit = 20, offset = 0 } = req.query;
-      const users = await DiscoveryService.getEligibleUsers(userId, parseInt(limit, 10), parseInt(offset, 10));
+      const { limit = 20, offset = 0, maxDistance, ageMin, ageMax, lat, lon } = req.query;
+
+      // If the client sent a live location, persist it on the user record
+      if (lat && lon) {
+        const db = require('../config/database');
+        await db.User.update(
+          { latitude: parseFloat(lat), longitude: parseFloat(lon) },
+          { where: { id: userId } }
+        );
+      }
+
+      const filters = {
+        maxDistance: maxDistance ? parseInt(maxDistance, 10) : undefined,
+        ageMin: ageMin ? parseInt(ageMin, 10) : undefined,
+        ageMax: ageMax ? parseInt(ageMax, 10) : undefined,
+      };
+
+      const users = await DiscoveryService.getEligibleUsers(
+        userId,
+        parseInt(limit, 10),
+        parseInt(offset, 10),
+        filters,
+      );
       return res.json({ users });
     } catch (err) {
       next(err);

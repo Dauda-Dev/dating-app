@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_ENDPOINTS } from '../constants';
+import { DiscoveryFilters } from '../types';
 
 const API_BASE_URL = 'https://dating-app-xgvv.onrender.com/api'; // Android emulator → localhost
 // For physical device, replace with your machine's LAN IP e.g. http://192.168.x.x:5000/api
@@ -136,8 +137,21 @@ class ApiClient {
   }
 
   // ── Discovery ─────────────────────────────────────────────────────────────
-  async getEligibleUsers(limit = 10, offset = 0) {
-    const r = await this.client.get(API_ENDPOINTS.ELIGIBLE_USERS, { params: { limit, offset } });
+  async getEligibleUsers(
+    limit = 10,
+    offset = 0,
+    filters?: Partial<DiscoveryFilters>,
+    location?: { lat: number; lon: number },
+  ) {
+    const params: Record<string, any> = { limit, offset };
+    if (location?.lat !== undefined) params.lat = location.lat;
+    if (location?.lon !== undefined) params.lon = location.lon;
+    if (filters && !filters.showGlobal) {
+      if (filters.maxDistance) params.maxDistance = filters.maxDistance;
+    }
+    if (filters?.ageMin) params.ageMin = filters.ageMin;
+    if (filters?.ageMax) params.ageMax = filters.ageMax;
+    const r = await this.client.get(API_ENDPOINTS.ELIGIBLE_USERS, { params });
     return r.data;
   }
 

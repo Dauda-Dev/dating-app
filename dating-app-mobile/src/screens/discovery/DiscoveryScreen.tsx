@@ -4,11 +4,12 @@ import {
   Animated, PanResponder, Dimensions, ActivityIndicator, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Location from 'expo-location';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   fetchEligibleUsers, likeUser, superLikeUser, passUser,
-  removeUserFromDeck, undoSwipe,
+  removeUserFromDeck, undoSwipe, setDiscoveryFilters, setUserLocation,
 } from '../../store/slices/discoverySlice';
 import { requestSteal } from '../../store/slices/stealSlice';
 import { apiClient } from '../../services/apiClient';
@@ -18,6 +19,7 @@ import { TutorialOverlay } from '../../components/common/TutorialOverlay';
 import { HelpButton } from '../../components/common/HelpButton';
 import { HelpModal } from '../../components/common/HelpModal';
 import { startTutorial, loadTutorialSeen } from '../../store/slices/tutorialSlice';
+import { DiscoveryFilterSheet } from '../../components/common/DiscoveryFilterSheet';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const SWIPE_THRESHOLD = SCREEN_W * 0.3;
@@ -33,13 +35,14 @@ interface QuotaInfo {
 export const DiscoveryScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const dispatch = useAppDispatch();
-  const { users, currentIndex, isLoading } = useAppSelector((s) => s.discovery);
+  const { users, currentIndex, isLoading, filters } = useAppSelector((s) => s.discovery);
   const { user } = useAppSelector((s) => s.auth);
   const { hasSeenTutorial } = useAppSelector((s) => s.tutorial);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
   const [isUndoing, setIsUndoing] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showFilter, setShowFilter] = useState(false);
 
   const tier = user?.subscriptionTier || 'free';
   const isGold = tier === 'gold';
@@ -69,8 +72,20 @@ export const DiscoveryScreen: React.FC = () => {
   // Re-fetch every time this tab is focused so swiped users don't reappear
   useFocusEffect(
     useCallback(() => {
-      dispatch(fetchEligibleUsers());
-      loadQuota();
+      (async () => {
+        // Request location permission silently — don't block if denied
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status === 'granted') {
+            const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            dispatch(setUserLocation({ lat: loc.coords.latitude, lon: loc.coords.longitude }));
+          }
+        } catch {
+          // ignore — location is optional
+        }
+        dispatch(fetchEligibleUsers());
+        loadQuota();
+      })();
     }, [loadQuota])
   );
 
@@ -274,13 +289,18 @@ export const DiscoveryScreen: React.FC = () => {
           <Text style={styles.headerBtnIcon}>⚙️</Text>
         </TouchableOpacity>
         <Text style={styles.screenTitle}>🔥</Text>
-        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('Subscription' as any)}>
-          {tier === 'gold'
-            ? <Text style={styles.headerBtnIcon}>🥇</Text>
-            : tier === 'premium'
-            ? <Text style={styles.headerBtnIcon}>⭐</Text>
-            : <Text style={[styles.headerBtnIcon, { color: COLORS.primary }]}>✨</Text>}
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={styles.headerBtn} onPress={() => setShowFilter(true)}>
+            <Text style={styles.headerBtnIcon}>🎚️</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('Subscription' as any)}>
+            {tier === 'gold'
+              ? <Text style={styles.headerBtnIcon}>🥇</Text>
+              : tier === 'premium'
+              ? <Text style={styles.headerBtnIcon}>⭐</Text>
+              : <Text style={[styles.headerBtnIcon, { color: COLORS.primary }]}>✨</Text>}
+          </TouchableOpacity>
+        </View>
       </View>
       {/* Quota pill (free only) */}
       {quota && !quota.unlimited && quota.remaining !== null && (
@@ -356,6 +376,11 @@ export const DiscoveryScreen: React.FC = () => {
             {currentUser.firstName}{currentUser.lastName ? ` ${currentUser.lastName}` : ''}{age ? `, ${age}` : ''}
           </Text>
           {currentUser.location ? <Text style={styles.cardLocation}>📍 {currentUser.location}</Text> : null}
+          {currentUser.distanceKm != null && (
+            <Text style={styles.cardDistance}>
+              {currentUser.distanceKm < 1 ? '📍 Less than 1 km away' : `📍 ${currentUser.distanceKm} km away`}
+            </Text>
+          )}
           {(currentUser.bio || currentUser.profile?.bio) ? (
             <Text style={styles.cardBio} numberOfLines={2}>{currentUser.bio || currentUser.profile?.bio}</Text>
           ) : null}
@@ -414,6 +439,18 @@ export const DiscoveryScreen: React.FC = () => {
           <Text style={styles.stealBtnText}>{isGold ? '⚡' : '🔒'}</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Filter Sheet */}
+      <DiscoveryFilterSheet
+        visible={showFilter}
+        initialFilters={filters}
+        onClose={() => setShowFilter(false)}
+        onApply={(newFilters) => {
+          dispatch(setDiscoveryFilters(newFilters));
+          dispatch(fetchEligibleUsers());
+          setShowFilter(false);
+        }}
+      />
     </View>
   );
 };
@@ -434,6 +471,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   headerBtnIcon: { fontSize: 22 },
+  headerRight: { flexDirection: 'row', alignItems: 'center' },
   screenTitle: { fontSize: 34, fontWeight: '700', color: COLORS.primary },
 
   // ── Quota pill ──
@@ -501,6 +539,7 @@ const styles = StyleSheet.create({
   },
   cardName: { fontSize: 28, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
   cardLocation: { fontSize: 14, color: 'rgba(255,255,255,0.9)', marginTop: 3, fontWeight: '500' },
+  cardDistance: { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 2, fontWeight: '400' },
   cardBio: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 5, lineHeight: 20 },
   compat: { fontSize: 13, color: '#FFD93D', marginTop: 6, fontWeight: '700' },
 

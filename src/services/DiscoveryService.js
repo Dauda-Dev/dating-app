@@ -21,8 +21,13 @@ class DiscoveryService {
    * Get eligible users for discovery (AVAILABLE users not already liked).
    * Applies gender preference, age range, and distance filters, then
    * attaches a compatibility score to each result.
+   *
+   * @param {object} [filters]  Optional overrides from the client filter sheet
+   * @param {number} [filters.maxDistance]  km override (takes priority over profile.preferredDistance)
+   * @param {number} [filters.ageMin]       min age override
+   * @param {number} [filters.ageMax]       max age override
    */
-  async getEligibleUsers(userId, limit = 20, offset = 0) {
+  async getEligibleUsers(userId, limit = 20, offset = 0, filters = {}) {
     const user = await db.User.findByPk(userId, {
       attributes: ['id', 'latitude', 'longitude'],
     });
@@ -47,17 +52,17 @@ class DiscoveryService {
       ? ['male', 'female', 'non-binary']
       : [myProfile.preferredGender];
 
-    // Age range preference (default 18-99 if not set)
-    const ageMin = myProfile?.ageRange?.min ?? 18;
-    const ageMax = myProfile?.ageRange?.max ?? 99;
+    // Age range — client filter takes priority over stored profile preference
+    const ageMin = filters.ageMin ?? myProfile?.ageRange?.min ?? 18;
+    const ageMax = filters.ageMax ?? myProfile?.ageRange?.max ?? 99;
 
     // Convert age bounds to birth-date bounds (today - ageMax → today - ageMin)
     const now = new Date();
     const dobMin = new Date(now.getFullYear() - ageMax, now.getMonth(), now.getDate());
     const dobMax = new Date(now.getFullYear() - ageMin, now.getMonth(), now.getDate());
 
-    // Preferred distance in km (default 50 km; null/0 → no distance filter)
-    const preferredDistanceKm = myProfile?.preferredDistance || 0;
+    // Distance — client filter takes priority; fallback to profile preference; 0 = no filter
+    const preferredDistanceKm = filters.maxDistance ?? myProfile?.preferredDistance ?? 0;
     const myLat = user.latitude ? parseFloat(user.latitude) : null;
     const myLon = user.longitude ? parseFloat(user.longitude) : null;
     const canFilterByDistance = preferredDistanceKm > 0 && myLat !== null && myLon !== null;
@@ -96,21 +101,26 @@ class DiscoveryService {
     });
 
     // Distance filter (post-query, avoids complex SQL while keeping things fast enough)
-    let eligible = candidates;
+    // Also computes and attaches distanceKm for display on the card
+    let eligible = candidates.map(u => {
+      const plain = u.toJSON();
+      const tLat = u.latitude ? parseFloat(u.latitude) : null;
+      const tLon = u.longitude ? parseFloat(u.longitude) : null;
+      plain.distanceKm = (myLat !== null && myLon !== null && tLat !== null && tLon !== null)
+        ? Math.round(haversineKm(myLat, myLon, tLat, tLon))
+        : null;
+      return { plain, u };
+    });
+
     if (canFilterByDistance) {
-      eligible = candidates.filter(u => {
-        const tLat = u.latitude ? parseFloat(u.latitude) : null;
-        const tLon = u.longitude ? parseFloat(u.longitude) : null;
-        if (tLat === null || tLon === null) return true; // no location data → include
-        return haversineKm(myLat, myLon, tLat, tLon) <= preferredDistanceKm;
-      });
-      // Apply offset + limit after distance filtering
+      eligible = eligible.filter(({ plain }) =>
+        plain.distanceKm === null || plain.distanceKm <= preferredDistanceKm
+      );
       eligible = eligible.slice(offset, offset + limit);
     }
 
     // Attach compatibility scores
-    const results = eligible.map(u => {
-      const plain = u.toJSON();
+    const results = eligible.map(({ plain, u }) => {
       plain.compatibilityScore = this._compatibility(myProfile, u.profile);
       return plain;
     });

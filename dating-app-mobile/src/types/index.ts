@@ -117,7 +117,15 @@ export interface DiscoveryUser {
   hobbies?: string[];
   interests?: string[];
   compatibilityScore?: number;
+  distanceKm?: number | null;
   profile?: Profile;
+}
+
+export interface DiscoveryFilters {
+  maxDistance: number;   // km, 0 = no filter
+  ageMin: number;
+  ageMax: number;
+  showGlobal: boolean;   // true = ignore distance filter
 }
 
 export interface StealRequest {
