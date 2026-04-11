@@ -61,7 +61,9 @@ export const getMe = createAsyncThunk(
       const response = await apiClient.getMe();
       return response;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch user');
+      const status = error.response?.status;
+      const message = error.response?.data?.message || 'Failed to fetch user';
+      return rejectWithValue(status === 401 ? '401 Unauthorized' : message);
     }
   }
 );
@@ -155,10 +157,18 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.needsOnboarding = computeNeedsOnboarding(user);
       })
-      .addCase(getMe.rejected, (state) => {
-        state.isAuthenticated = false;
-        state.user = null;
-        state.token = null;
+      .addCase(getMe.rejected, (state, action) => {
+        // Only log out on an explicit 401 (token invalid/expired).
+        // Network errors or server errors should NOT clear the session —
+        // that's what caused the profile tab redirecting to login.
+        const payload = action.payload as string | undefined;
+        const is401 = payload?.includes('401') || payload?.includes('Not authenticated') || payload?.includes('Unauthorized');
+        if (is401) {
+          state.isAuthenticated = false;
+          state.user = null;
+          state.token = null;
+        }
+        // Otherwise keep isAuthenticated = true so the user stays in the app
       })
 
       .addCase(restoreAuth.fulfilled, (state, action) => {
