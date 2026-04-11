@@ -155,7 +155,11 @@ const authSlice = createSlice({
         const user = action.payload?.user || action.payload;
         state.user = user;
         state.isAuthenticated = true;
-        state.needsOnboarding = computeNeedsOnboarding(user);
+        // Only compute needsOnboarding if it hasn't been resolved yet.
+        // Never flip it back to true once the user is in the main app.
+        if (state.needsOnboarding) {
+          state.needsOnboarding = computeNeedsOnboarding(user);
+        }
       })
       .addCase(getMe.rejected, (state, action) => {
         // Only log out on an explicit 401 (token invalid/expired).
