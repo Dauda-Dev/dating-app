@@ -1,47 +1,34 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image,
-  TouchableOpacity, Alert,
+  TouchableOpacity, Alert, Dimensions,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { getMe, logoutUser } from '../../store/slices/authSlice';
-import { apiClient } from '../../services/apiClient';
 import { COLORS } from '../../constants';
 import { MainStackParamList } from '../../navigation/MainNavigator';
+import { PhotoViewerModal } from '../../components/common/PhotoViewerModal';
 
 type Nav = NativeStackNavigationProp<MainStackParamList>;
+
+const { width: W } = Dimensions.get('window');
+const HERO_HEIGHT = W * 1.1; // tall portrait card like Tinder
 
 export const ProfileScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigation = useNavigation<Nav>();
   const { user } = useAppSelector((s) => s.auth);
-  const [uploading, setUploading] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   useEffect(() => { dispatch(getMe()); }, []);
 
-  const handlePhotoChange = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert('Permission needed'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0]) {
-      setUploading(true);
-      try {
-        await apiClient.uploadProfilePicture(result.assets[0].uri);
-        dispatch(getMe());
-      } catch {
-        Alert.alert('Upload failed', 'Could not upload photo.');
-      } finally {
-        setUploading(false);
-      }
-    }
+  const openViewer = (idx: number) => {
+    setViewerIndex(idx);
+    setViewerOpen(true);
   };
 
   const handleLogout = () => {
@@ -54,25 +41,101 @@ export const ProfileScreen: React.FC = () => {
   if (!user) return null;
 
   const profile = user.profile;
+  const allPhotos: string[] = profile?.photos?.length
+    ? profile.photos
+    : user.profilePhoto
+    ? [user.profilePhoto]
+    : [];
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handlePhotoChange} disabled={uploading} style={styles.photoWrap}>
-          {user.profilePhoto ? (
-            <Image source={{ uri: user.profilePhoto }} style={styles.photo} />
-          ) : (
-            <View style={[styles.photo, styles.photoPlaceholder]}>
-              <Text style={{ fontSize: 48 }}>👤</Text>
+      {/* ── Hero Photo Card (Tinder-style) ──────────────────────────── */}
+      <View style={styles.heroCard}>
+        {allPhotos.length > 0 ? (
+          <TouchableOpacity activeOpacity={0.92} onPress={() => openViewer(0)} style={styles.heroTouch}>
+            <Image source={{ uri: allPhotos[0] }} style={styles.heroImage} />
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.7)']}
+              style={styles.heroGradient}
+            />
+            {/* Dot indicators */}
+            {allPhotos.length > 1 && (
+              <View style={styles.heroDots}>
+                {allPhotos.map((_, idx) => (
+                  <View key={idx} style={[styles.heroDot, idx === 0 && styles.heroDotActive]} />
+                ))}
+              </View>
+            )}
+            {/* Name / info overlay */}
+            <View style={styles.heroInfo}>
+              <Text style={styles.heroName}>
+                {user.firstName} {user.lastName}
+              </Text>
+              {user.subscriptionTier && user.subscriptionTier !== 'free' && (
+                <View style={styles.heroBadge}>
+                  <Text style={styles.heroBadgeText}>
+                    {user.subscriptionTier === 'gold' ? '🥇 Gold' : '⭐ Premium'}
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.heroPhotoCount}>
+                📷 {allPhotos.length} photo{allPhotos.length !== 1 ? 's' : ''} · tap to view
+              </Text>
             </View>
-          )}
-          <View style={styles.editBadge}>
-            <Text style={styles.editBadgeText}>{uploading ? '⏳' : '📷'}</Text>
-          </View>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.heroEmpty}
+            onPress={() => navigation.navigate('ProfileEdit')}
+          >
+            <Text style={{ fontSize: 56 }}>📷</Text>
+            <Text style={styles.heroEmptyText}>No photos yet</Text>
+            <Text style={styles.heroEmptySubtext}>Tap to add photos</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Edit photos button — overlaid top-right */}
+        <TouchableOpacity
+          style={styles.editPhotosBtn}
+          onPress={() => navigation.navigate('ProfileEdit')}
+        >
+          <Text style={styles.editPhotosBtnText}>✏️ Edit Photos</Text>
         </TouchableOpacity>
-        <Text style={styles.name}>{user.firstName} {user.lastName}</Text>
-        <Text style={styles.email}>{user.email}</Text>
+      </View>
+
+      {/* ── Photo Grid ──────────────────────────────────────────────── */}
+      {allPhotos.length > 1 && (
+        <View style={styles.card}>
+          <View style={styles.cardTitleRow}>
+            <Text style={styles.cardTitle}>All Photos</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('ProfileEdit')}>
+              <Text style={styles.cardTitleAction}>Manage →</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.photoGrid}>
+            {allPhotos.map((uri, idx) => (
+              <TouchableOpacity
+                key={uri + idx}
+                style={styles.photoSlot}
+                onPress={() => openViewer(idx)}
+                activeOpacity={0.82}
+              >
+                <Image source={{ uri }} style={styles.photoThumb} />
+                {idx === 0 && (
+                  <View style={styles.mainBadge}><Text style={styles.mainBadgeText}>Main</Text></View>
+                )}
+                <View style={styles.photoOverlay}>
+                  <Text style={styles.photoOverlayIcon}>🔍</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Email + tier strip */}
+      <View style={styles.identityStrip}>
+        <Text style={styles.emailText}>{user.email}</Text>
         {user.subscriptionTier && (
           <View style={styles.tierBadge}>
             <Text style={styles.tierText}>
@@ -81,23 +144,6 @@ export const ProfileScreen: React.FC = () => {
           </View>
         )}
       </View>
-
-      {/* Photo Gallery */}
-      {profile?.photos?.length ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Photos</Text>
-          <View style={styles.photoGrid}>
-            {profile.photos.map((uri, idx) => (
-              <View key={uri} style={styles.photoSlot}>
-                <Image source={{ uri }} style={styles.photoThumb} />
-                {idx === 0 && (
-                  <View style={styles.mainBadge}><Text style={styles.mainBadgeText}>Main</Text></View>
-                )}
-              </View>
-            ))}
-          </View>
-        </View>
-      ) : null}
 
       {/* Bio */}
       {profile?.bio ? (
@@ -110,7 +156,6 @@ export const ProfileScreen: React.FC = () => {
       {/* Details */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Details</Text>
-        {profile?.location ? <InfoRow icon="📍" label="Location" value={profile.location} /> : null}
         {profile?.occupation ? <InfoRow icon="💼" label="Occupation" value={profile.occupation} /> : null}
         {profile?.education ? <InfoRow icon="🎓" label="Education" value={profile.education} /> : null}
         {profile?.relationshipGoal ? <InfoRow icon="💘" label="Goal" value={profile.relationshipGoal} /> : null}
@@ -159,16 +204,31 @@ export const ProfileScreen: React.FC = () => {
         <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('ProfileEdit')}>
           <Text style={styles.actionIcon}>✏️</Text>
           <Text style={styles.actionText}>Edit Profile</Text>
+          <Text style={styles.actionChevron}>›</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('Settings')}>
           <Text style={styles.actionIcon}>⚙️</Text>
           <Text style={styles.actionText}>Settings</Text>
+          <Text style={styles.actionChevron}>›</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.actionBtn, styles.logoutBtn]} onPress={handleLogout}>
           <Text style={styles.actionIcon}>🚪</Text>
           <Text style={[styles.actionText, { color: COLORS.danger }]}>Logout</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Full-screen photo viewer */}
+      <PhotoViewerModal
+        photos={allPhotos}
+        initialIndex={viewerIndex}
+        visible={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        userName={`${user.firstName} ${user.lastName}`}
+        onEditPress={() => {
+          setViewerOpen(false);
+          navigation.navigate('ProfileEdit');
+        }}
+      />
     </ScrollView>
   );
 };
@@ -185,43 +245,165 @@ const InfoRow = ({ icon, label, value }: { icon: string; label: string; value: s
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.background },
-  content: { paddingBottom: 48 },
-  header: { alignItems: 'center', paddingTop: 56, paddingBottom: 24, backgroundColor: '#fff' },
-  photoWrap: { position: 'relative', marginBottom: 12 },
-  photo: { width: 100, height: 100, borderRadius: 50 },
-  photoPlaceholder: {
-    backgroundColor: COLORS.lightGray, alignItems: 'center', justifyContent: 'center',
+  content: { paddingBottom: 60 },
+
+  // ── Hero card ──────────────────────────────────────────────────────
+  heroCard: {
+    marginHorizontal: 16,
+    marginTop: 56,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: COLORS.lightGray,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  editBadge: {
-    position: 'absolute', bottom: 0, right: 0,
-    width: 30, height: 30, borderRadius: 15,
-    backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: '#fff',
+  heroTouch: { width: '100%', aspectRatio: 0.9 },
+  heroImage: { width: '100%', height: '100%' },
+  heroGradient: {
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%',
   },
-  editBadgeText: { fontSize: 14 },
-  name: { fontSize: 22, fontWeight: '700', color: COLORS.black },
-  email: { fontSize: 13, color: COLORS.gray, marginTop: 2 },
+  heroDots: {
+    position: 'absolute',
+    top: 12,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: 4,
+  },
+  heroDot: {
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    width: 24,
+  },
+  heroDotActive: { backgroundColor: '#fff', width: 32 },
+  heroInfo: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    gap: 5,
+  },
+  heroName: {
+    color: '#fff',
+    fontSize: 26,
+    fontWeight: '800',
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  heroBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,107,157,0.85)',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  heroBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  heroPhotoCount: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  heroEmpty: {
+    aspectRatio: 0.9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  heroEmptyText: { fontSize: 18, fontWeight: '700', color: COLORS.darkGray },
+  heroEmptySubtext: { fontSize: 13, color: COLORS.gray },
+  editPhotosBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(0,0,0,0.52)',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  editPhotosBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+
+  // ── Identity strip ─────────────────────────────────────────────────
+  identityStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 20,
+    marginTop: 14,
+    marginBottom: 4,
+  },
+  emailText: { fontSize: 13, color: COLORS.gray },
   tierBadge: {
-    marginTop: 8, backgroundColor: '#FFF3E0', borderRadius: 12,
-    paddingHorizontal: 12, paddingVertical: 4,
+    backgroundColor: '#FFF3E0',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
   },
-  tierText: { fontSize: 13, fontWeight: '600', color: COLORS.warning },
+  tierText: { fontSize: 12, fontWeight: '600', color: COLORS.warning },
+
+  // ── Cards ──────────────────────────────────────────────────────────
   card: {
-    backgroundColor: '#fff', borderRadius: 16, marginHorizontal: 16,
-    marginTop: 12, padding: 18,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: COLORS.black, marginBottom: 12 },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: COLORS.black },
+  cardTitleAction: { fontSize: 13, color: COLORS.primary, fontWeight: '600' },
   bioText: { fontSize: 14, color: COLORS.darkGray, lineHeight: 20 },
+
+  // ── Photo grid (inside card) ────────────────────────────────────────
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  photoSlot: {
+    width: '31%',
+    aspectRatio: 3 / 4,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: COLORS.lightGray,
+  },
+  photoThumb: { width: '100%', height: '100%' },
+  mainBadge: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    backgroundColor: COLORS.primary,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  mainBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  photoOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoOverlayIcon: { fontSize: 0 }, // invisible until pressed (handled by opacity)
+
+  // ── Details ────────────────────────────────────────────────────────
   infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   infoIcon: { fontSize: 20, marginRight: 12 },
   infoLabel: { fontSize: 11, color: COLORS.gray },
   infoValue: { fontSize: 14, color: COLORS.darkGray, fontWeight: '500' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    backgroundColor: COLORS.lightGray, borderRadius: 14,
-    paddingHorizontal: 12, paddingVertical: 5,
-  },
+  chip: { backgroundColor: COLORS.lightGray, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 5 },
   chipInterest: { backgroundColor: '#EDE7F6' },
   chipText: { fontSize: 12, color: COLORS.darkGray },
   hotTakesSubtitle: { fontSize: 12, color: COLORS.gray, marginBottom: 12 },
@@ -233,22 +415,24 @@ const styles = StyleSheet.create({
   },
   hotTakeEmoji: { fontSize: 16, marginRight: 8, marginTop: 1 },
   hotTakeText: { flex: 1, fontSize: 14, color: COLORS.darkGray, lineHeight: 20 },
-  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  photoSlot: { width: '31%', aspectRatio: 3 / 4, borderRadius: 10, overflow: 'hidden', position: 'relative' },
-  photoThumb: { width: '100%', height: '100%' },
-  mainBadge: {
-    position: 'absolute', bottom: 5, left: 5,
-    backgroundColor: COLORS.primary, borderRadius: 5,
-    paddingHorizontal: 6, paddingVertical: 2,
-  },
-  mainBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+
+  // ── Actions ────────────────────────────────────────────────────────
   actions: { margin: 16, marginTop: 20 },
   actionBtn: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 10,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
   logoutBtn: { borderWidth: 1, borderColor: COLORS.lightGray },
   actionIcon: { fontSize: 20, marginRight: 14 },
-  actionText: { fontSize: 15, color: COLORS.black, fontWeight: '500' },
+  actionText: { flex: 1, fontSize: 15, color: COLORS.black, fontWeight: '500' },
+  actionChevron: { fontSize: 20, color: COLORS.gray },
 });
