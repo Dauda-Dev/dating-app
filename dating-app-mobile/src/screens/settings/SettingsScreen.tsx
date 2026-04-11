@@ -5,12 +5,15 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { logoutUser } from '../../store/slices/authSlice';
-import { COLORS } from '../../constants';
+import { toggleTheme } from '../../store/slices/themeSlice';
+import { useTheme } from '../../constants';
 
 export const SettingsScreen: React.FC = () => {
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((s) => s.auth);
+  const themeMode = useAppSelector((s) => s.theme.mode);
+  const C = useTheme();
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure?', [
@@ -22,42 +25,57 @@ export const SettingsScreen: React.FC = () => {
   const SettingRow = ({
     icon, label, onPress, value, isSwitch,
   }: { icon: string; label: string; onPress?: () => void; value?: boolean; isSwitch?: boolean }) => (
-    <TouchableOpacity style={styles.row} onPress={onPress} disabled={isSwitch}>
+    <TouchableOpacity
+      style={[styles.row, { borderBottomColor: C.border }]}
+      onPress={onPress}
+      disabled={isSwitch}
+    >
       <Text style={styles.rowIcon}>{icon}</Text>
-      <Text style={styles.rowLabel}>{label}</Text>
+      <Text style={[styles.rowLabel, { color: C.black }]}>{label}</Text>
       {isSwitch ? (
-        <Switch value={value} onValueChange={onPress as any} trackColor={{ true: COLORS.primary }} />
+        <Switch value={value} onValueChange={onPress as any} trackColor={{ true: C.primary }} thumbColor={C.white} />
       ) : (
-        <Text style={styles.rowArrow}>›</Text>
+        <Text style={[styles.rowArrow, { color: C.lightGray }]}>›</Text>
       )}
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.headerBar}>
+    <View style={[styles.screen, { backgroundColor: C.background }]}>
+      <View style={[styles.headerBar, { backgroundColor: C.headerBg, borderBottomColor: C.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>← Back</Text>
+          <Text style={[styles.back, { color: C.primary }]}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Settings</Text>
+        <Text style={[styles.title, { color: C.headerText }]}>Settings</Text>
         <View style={{ width: 60 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.section}>Account</Text>
-        <View style={styles.group}>
+        <Text style={[styles.section, { color: C.gray }]}>Account</Text>
+        <View style={[styles.group, { backgroundColor: C.card }]}>
           <SettingRow icon="📧" label={user?.email || 'Email'} />
           <SettingRow icon="🔒" label="Change Password" onPress={() => Alert.alert('Coming soon')} />
         </View>
 
-        <Text style={styles.section}>Preferences</Text>
-        <View style={styles.group}>
+        <Text style={[styles.section, { color: C.gray }]}>Appearance</Text>
+        <View style={[styles.group, { backgroundColor: C.card }]}>
+          <SettingRow
+            icon={themeMode === 'dark' ? '🌙' : '☀️'}
+            label={themeMode === 'dark' ? 'Dark Mode' : 'Light Mode'}
+            isSwitch
+            value={themeMode === 'dark'}
+            onPress={() => dispatch(toggleTheme(themeMode))}
+          />
+        </View>
+
+        <Text style={[styles.section, { color: C.gray }]}>Preferences</Text>
+        <View style={[styles.group, { backgroundColor: C.card }]}>
           <SettingRow icon="🔔" label="Push Notifications" isSwitch value={true} onPress={() => {}} />
           <SettingRow icon="📍" label="Location Access" isSwitch value={true} onPress={() => {}} />
         </View>
 
-        <Text style={styles.section}>Subscription</Text>
-        <View style={styles.group}>
+        <Text style={[styles.section, { color: C.gray }]}>Subscription</Text>
+        <View style={[styles.group, { backgroundColor: C.card }]}>
           <SettingRow
             icon={user?.subscriptionTier === 'gold' ? '🥇' : user?.subscriptionTier === 'premium' ? '⭐' : '🆓'}
             label={`Current plan: ${user?.subscriptionTier || 'free'}`}
@@ -65,8 +83,8 @@ export const SettingsScreen: React.FC = () => {
           <SettingRow icon="💳" label="Upgrade Plan" onPress={() => (navigation as any).navigate('Subscription')} />
         </View>
 
-        <Text style={styles.section}>Support</Text>
-        <View style={styles.group}>
+        <Text style={[styles.section, { color: C.gray }]}>Support</Text>
+        <View style={[styles.group, { backgroundColor: C.card }]}>
           <SettingRow icon="❓" label="Help & FAQ" onPress={() => Alert.alert('Coming soon')} />
           <SettingRow icon="📝" label="Terms of Service" onPress={() => Alert.alert('Coming soon')} />
           <SettingRow icon="🔐" label="Privacy Policy" onPress={() => Alert.alert('Coming soon')} />
@@ -74,8 +92,8 @@ export const SettingsScreen: React.FC = () => {
 
         {(user as any)?.role === 'admin' || (user as any)?.role === 'moderator' ? (
           <>
-            <Text style={styles.section}>Admin</Text>
-            <View style={styles.group}>
+            <Text style={[styles.section, { color: C.gray }]}>Admin</Text>
+            <View style={[styles.group, { backgroundColor: C.card }]}>
               <SettingRow
                 icon="🛡️"
                 label="Admin Panel — Reports"
@@ -85,18 +103,21 @@ export const SettingsScreen: React.FC = () => {
           </>
         ) : null}
 
-        <Text style={styles.section}>Danger Zone</Text>
-        <View style={styles.group}>
-          <TouchableOpacity style={[styles.row, styles.rowDanger]} onPress={handleLogout}>
+        <Text style={[styles.section, { color: C.gray }]}>Danger Zone</Text>
+        <View style={[styles.group, { backgroundColor: C.card }]}>
+          <TouchableOpacity
+            style={[styles.row, { borderBottomColor: C.isDark ? '#3A1A1A' : '#FFE5E5' }]}
+            onPress={handleLogout}
+          >
             <Text style={styles.rowIcon}>🚪</Text>
-            <Text style={[styles.rowLabel, styles.rowLabelDanger]}>Logout</Text>
+            <Text style={[styles.rowLabel, { color: C.danger }]}>Logout</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.row, styles.rowDanger]}
+            style={[styles.row, { borderBottomColor: C.isDark ? '#3A1A1A' : '#FFE5E5' }]}
             onPress={() => Alert.alert('Delete Account', 'This action is irreversible. Contact support to delete your account.')}
           >
             <Text style={styles.rowIcon}>🗑️</Text>
-            <Text style={[styles.rowLabel, styles.rowLabelDanger]}>Delete Account</Text>
+            <Text style={[styles.rowLabel, { color: C.danger }]}>Delete Account</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -105,28 +126,29 @@ export const SettingsScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.background },
+  screen: { flex: 1 },
   headerBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingTop: 56, paddingBottom: 14,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: COLORS.lightGray,
+    borderBottomWidth: 1,
   },
-  back: { color: COLORS.primary, fontSize: 16, width: 60 },
-  title: { fontSize: 17, fontWeight: '700', color: COLORS.black },
+  back: { fontSize: 16, width: 60 },
+  title: { fontSize: 17, fontWeight: '700' },
   content: { padding: 20, paddingBottom: 48 },
-  section: { fontSize: 12, fontWeight: '700', color: COLORS.gray, letterSpacing: 1, marginBottom: 8, marginTop: 8, textTransform: 'uppercase' },
+  section: {
+    fontSize: 12, fontWeight: '700', letterSpacing: 1,
+    marginBottom: 8, marginTop: 8, textTransform: 'uppercase',
+  },
   group: {
-    backgroundColor: '#fff', borderRadius: 14, marginBottom: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
+    borderRadius: 14, marginBottom: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
     overflow: 'hidden',
   },
   row: {
-    flexDirection: 'row', alignItems: 'center', padding: 16,
-    borderBottomWidth: 1, borderBottomColor: COLORS.lightGray,
+    flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1,
   },
-  rowDanger: { borderBottomColor: '#FFE5E5' },
   rowIcon: { fontSize: 20, marginRight: 14 },
-  rowLabel: { flex: 1, fontSize: 15, color: COLORS.black },
-  rowLabelDanger: { color: COLORS.danger },
-  rowArrow: { fontSize: 22, color: COLORS.lightGray },
+  rowLabel: { flex: 1, fontSize: 15 },
+  rowArrow: { fontSize: 22 },
 });

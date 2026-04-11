@@ -8,7 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { getMe, logoutUser } from '../../store/slices/authSlice';
-import { COLORS } from '../../constants';
+import { COLORS, useTheme } from '../../constants';
 import { MainStackParamList } from '../../navigation/MainNavigator';
 import { PhotoViewerModal } from '../../components/common/PhotoViewerModal';
 
@@ -21,6 +21,7 @@ export const ProfileScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigation = useNavigation<Nav>();
   const { user } = useAppSelector((s) => s.auth);
+  const C = useTheme();
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
 
@@ -48,9 +49,9 @@ export const ProfileScreen: React.FC = () => {
     : [];
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.screen, { backgroundColor: C.background }]} contentContainerStyle={styles.content}>
       {/* ── Hero Photo Card (Tinder-style) ──────────────────────────── */}
-      <View style={styles.heroCard}>
+      <View style={[styles.heroCard, { backgroundColor: C.surfaceAlt }]}>
         {allPhotos.length > 0 ? (
           <TouchableOpacity activeOpacity={0.92} onPress={() => openViewer(0)} style={styles.heroTouch}>
             <Image source={{ uri: allPhotos[0] }} style={styles.heroImage} />
@@ -105,7 +106,7 @@ export const ProfileScreen: React.FC = () => {
 
       {/* ── Photo Grid ──────────────────────────────────────────────── */}
       {allPhotos.length > 1 && (
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: C.card }]}>
           <View style={styles.cardTitleRow}>
             <Text style={styles.cardTitle}>All Photos</Text>
             <TouchableOpacity onPress={() => navigation.navigate('ProfileEdit')}>
@@ -135,7 +136,7 @@ export const ProfileScreen: React.FC = () => {
 
       {/* Email + tier strip */}
       <View style={styles.identityStrip}>
-        <Text style={styles.emailText}>{user.email}</Text>
+        <Text style={[styles.emailText, { color: C.gray }]}>{user.email}</Text>
         {user.subscriptionTier && (
           <View style={styles.tierBadge}>
             <Text style={styles.tierText}>
@@ -147,15 +148,15 @@ export const ProfileScreen: React.FC = () => {
 
       {/* Bio */}
       {profile?.bio ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>About Me</Text>
+        <View style={[styles.card, { backgroundColor: C.card }]}>
+          <Text style={[styles.cardTitle, { color: C.black }]}>About Me</Text>
           <Text style={styles.bioText}>{profile.bio}</Text>
         </View>
       ) : null}
 
       {/* Details */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Details</Text>
+      <View style={[styles.card, { backgroundColor: C.card }]}>
+        <Text style={[styles.cardTitle, { color: C.black }]}>Details</Text>
         {profile?.occupation ? <InfoRow icon="💼" label="Occupation" value={profile.occupation} /> : null}
         {profile?.education ? <InfoRow icon="🎓" label="Education" value={profile.education} /> : null}
         {profile?.relationshipGoal ? <InfoRow icon="💘" label="Goal" value={profile.relationshipGoal} /> : null}
@@ -163,8 +164,8 @@ export const ProfileScreen: React.FC = () => {
 
       {/* Hobbies */}
       {profile?.hobbies?.length ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Hobbies</Text>
+        <View style={[styles.card, { backgroundColor: C.card }]}>
+          <Text style={[styles.cardTitle, { color: C.black }]}>Hobbies</Text>
           <View style={styles.chips}>
             {profile.hobbies.map((h) => (
               <View key={h} style={styles.chip}><Text style={styles.chipText}>{h}</Text></View>
@@ -175,8 +176,8 @@ export const ProfileScreen: React.FC = () => {
 
       {/* Interests */}
       {profile?.interests?.length ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Interests</Text>
+        <View style={[styles.card, { backgroundColor: C.card }]}>
+          <Text style={[styles.cardTitle, { color: C.black }]}>Interests</Text>
           <View style={styles.chips}>
             {profile.interests.map((i) => (
               <View key={i} style={[styles.chip, styles.chipInterest]}><Text style={styles.chipText}>{i}</Text></View>
@@ -187,8 +188,8 @@ export const ProfileScreen: React.FC = () => {
 
       {/* Hot Takes */}
       {profile?.hotTakes?.filter(Boolean).length ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>🔥 My Hot Takes</Text>
+        <View style={[styles.card, { backgroundColor: C.card }]}>
+          <Text style={[styles.cardTitle, { color: C.black }]}>🔥 My Hot Takes</Text>
           <Text style={styles.hotTakesSubtitle}>These are shared with your match as conversation starters</Text>
           {profile.hotTakes.filter(Boolean).map((take, idx) => (
             <View key={idx} style={styles.hotTakeItem}>
@@ -201,19 +202,19 @@ export const ProfileScreen: React.FC = () => {
 
       {/* Actions */}
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('ProfileEdit')}>
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: C.card }]} onPress={() => navigation.navigate('ProfileEdit')}>
           <Text style={styles.actionIcon}>✏️</Text>
-          <Text style={styles.actionText}>Edit Profile</Text>
-          <Text style={styles.actionChevron}>›</Text>
+          <Text style={[styles.actionText, { color: C.black }]}>Edit Profile</Text>
+          <Text style={[styles.actionChevron, { color: C.lightGray }]}>›</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('Settings')}>
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: C.card }]} onPress={() => navigation.navigate('Settings')}>
           <Text style={styles.actionIcon}>⚙️</Text>
-          <Text style={styles.actionText}>Settings</Text>
-          <Text style={styles.actionChevron}>›</Text>
+          <Text style={[styles.actionText, { color: C.black }]}>Settings</Text>
+          <Text style={[styles.actionChevron, { color: C.lightGray }]}>›</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionBtn, styles.logoutBtn]} onPress={handleLogout}>
+        <TouchableOpacity style={[styles.actionBtn, styles.logoutBtn, { backgroundColor: C.card, borderColor: C.border }]} onPress={handleLogout}>
           <Text style={styles.actionIcon}>🚪</Text>
-          <Text style={[styles.actionText, { color: COLORS.danger }]}>Logout</Text>
+          <Text style={[styles.actionText, { color: C.danger }]}>Logout</Text>
         </TouchableOpacity>
       </View>
 

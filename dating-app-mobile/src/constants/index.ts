@@ -1,22 +1,6 @@
-export const COLORS = {
-  primary: '#FF6B9D',
-  secondary: '#4ECDC4',
-  accent: '#FFD93D',
-  success: '#6BCF7F',
-  danger: '#FF5252',
-  warning: '#FFA726',
-  black: '#1A1A1A',
-  darkGray: '#4A4A4A',
-  gray: '#9E9E9E',
-  lightGray: '#E0E0E0',
-  white: '#FFFFFF',
-  background: '#F8F9FA',
-  gradientStart: '#FF6B9D',
-  gradientEnd: '#C44569',
-  online: '#6BCF7F',
-  offline: '#9E9E9E',
-  away: '#FFA726',
-};
+// Theme tokens — single source of truth
+export { COLORS, LIGHT_COLORS, DARK_COLORS, ThemeContext, useTheme } from './theme';
+export type { AppColors, } from './theme';
 
 export const MATCH_STATUS_CONFIG: Record<string, { label: string; color: string; action: string }> = {
   matched_locked: { label: '🔒 Locked — Schedule Video Call', color: '#FF6B9D', action: 'Start Video Call' },

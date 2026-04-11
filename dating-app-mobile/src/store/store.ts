@@ -6,6 +6,7 @@ import stealReducer from './slices/stealSlice';
 import chatReducer from './slices/chatSlice';
 import tutorialReducer from './slices/tutorialSlice';
 import adminReducer from './slices/adminSlice';
+import themeReducer from './slices/themeSlice';
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     chat: chatReducer,
     tutorial: tutorialReducer,
     admin: adminReducer,
+    theme: themeReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

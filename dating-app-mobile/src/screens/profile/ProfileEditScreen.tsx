@@ -8,7 +8,7 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { updateProfile, getMe } from '../../store/slices/authSlice';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
-import { COLORS, HOBBIES_OPTIONS, INTERESTS_OPTIONS } from '../../constants';
+import { COLORS, HOBBIES_OPTIONS, INTERESTS_OPTIONS, useTheme } from '../../constants';
 import { apiClient } from '../../services/apiClient';
 
 const MAX_HOT_TAKES = 5;
@@ -26,6 +26,7 @@ export const ProfileEditScreen: React.FC = () => {
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
   const { user, isLoading } = useAppSelector((s) => s.auth);
+  const C = useTheme();
   const profile = user?.profile;
 
   const [photos, setPhotos] = useState<string[]>(profile?.photos || []);
@@ -113,19 +114,19 @@ export const ProfileEditScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.headerBar}>
+    <View style={[styles.screen, { backgroundColor: C.background }]}>
+      <View style={[styles.headerBar, { backgroundColor: C.headerBg, borderBottomColor: C.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.cancel}>Cancel</Text>
+          <Text style={[styles.cancel, { color: C.primary }]}>Cancel</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Edit Profile</Text>
+        <Text style={[styles.title, { color: C.headerText }]}>Edit Profile</Text>
         <View style={{ width: 60 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* ── Photo Grid ───────────────────────────────────────────────── */}
         <Text style={styles.sectionLabel}>Photos ({photos.length}/9)</Text>
-        <Text style={styles.photoHint}>First photo is shown on your profile. Tap a photo to remove it.</Text>
+        <Text style={[styles.photoHint, { color: C.gray }]}>First photo is shown on your profile. Tap a photo to remove it.</Text>
         <View style={styles.photoGrid}>
           {photos.map((uri, idx) => (
             <TouchableOpacity key={uri} style={styles.photoSlot} onPress={() => handleDeletePhoto(uri)}>
