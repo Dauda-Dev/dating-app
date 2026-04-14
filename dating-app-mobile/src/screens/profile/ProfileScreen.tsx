@@ -25,7 +25,8 @@ export const ProfileScreen: React.FC = () => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
 
-  useEffect(() => { dispatch(getMe()); }, []);
+  // Only refresh from server if we don't already have user data
+  useEffect(() => { if (!user) dispatch(getMe()); }, []);
 
   const openViewer = (idx: number) => {
     setViewerIndex(idx);

@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch, Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { logoutUser } from '../../store/slices/authSlice';
 import { toggleTheme } from '../../store/slices/themeSlice';
 import { useTheme } from '../../constants';
+import { notificationService } from '../../services/notificationService';
 
 export const SettingsScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -14,6 +15,40 @@ export const SettingsScreen: React.FC = () => {
   const { user } = useAppSelector((s) => s.auth);
   const themeMode = useAppSelector((s) => s.theme.mode);
   const C = useTheme();
+
+  const [pushEnabled, setPushEnabled] = useState(false);
+
+  useEffect(() => {
+    notificationService.hasPermission().then(setPushEnabled);
+  }, []);
+
+  const handleTogglePush = async () => {
+    const hasPerm = await notificationService.hasPermission();
+    if (hasPerm) {
+      // Already granted — can't revoke programmatically; open settings
+      Alert.alert(
+        'Disable Notifications',
+        'To turn off notifications, go to your device Settings > Apps > Ovally > Notifications.',
+        [
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+    } else {
+      const granted = await notificationService.register();
+      setPushEnabled(granted);
+      if (!granted) {
+        Alert.alert(
+          'Permission Denied',
+          'Allow notifications in device Settings > Apps > Ovally > Notifications.',
+          [
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            { text: 'Cancel', style: 'cancel' },
+          ]
+        );
+      }
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure?', [
@@ -70,7 +105,7 @@ export const SettingsScreen: React.FC = () => {
 
         <Text style={[styles.section, { color: C.gray }]}>Preferences</Text>
         <View style={[styles.group, { backgroundColor: C.card }]}>
-          <SettingRow icon="🔔" label="Push Notifications" isSwitch value={true} onPress={() => {}} />
+          <SettingRow icon="🔔" label="Push Notifications" isSwitch value={pushEnabled} onPress={handleTogglePush} />
           <SettingRow icon="📍" label="Location Access" isSwitch value={true} onPress={() => {}} />
         </View>
 

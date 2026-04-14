@@ -39,7 +39,11 @@
         "INTERNET",
         "MODIFY_AUDIO_SETTINGS",
         "BLUETOOTH",
-        "BLUETOOTH_CONNECT"
+        "BLUETOOTH_CONNECT",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "POST_NOTIFICATIONS",
+        "VIBRATE"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -48,6 +52,22 @@
     },
     "plugins": [
       "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#FF6B9D",
+          "androidMode": "default",
+          "iosDisplayInForeground": true
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Ovally uses your location to show you people nearby.",
+          "locationWhenInUsePermission": "Ovally uses your location to show you people nearby."
+        }
+      ],
       [
         "expo-build-properties",
         {

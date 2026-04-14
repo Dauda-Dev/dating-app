@@ -173,6 +173,18 @@ module.exports = {
     }
   },
 
+  async registerPushToken(req, res, next) {
+    try {
+      const userId = req.userId || req.user?.userId;
+      const { pushToken } = req.body;
+      if (!pushToken) return res.status(400).json({ error: 'pushToken is required' });
+      await db.User.update({ pushToken }, { where: { id: userId } });
+      return res.json({ success: true });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async updateLastActive(req, res, next) {
     try {
       const userId = req.userId || req.user?.userId;

@@ -29,6 +29,8 @@ export const login = createAsyncThunk(
       const response = await apiClient.login(email, password);
       await apiClient.setToken(response.token);
       await AsyncStorage.setItem('refreshToken', response.refreshToken);
+      // Cache user so restoreAuth can repopulate state instantly on next launch
+      if (response.user) await AsyncStorage.setItem('cachedUser', JSON.stringify(response.user));
       return response;
     } catch (error: any) {
       const status = error.response?.status;
@@ -61,9 +63,11 @@ export const getMe = createAsyncThunk(
       const response = await apiClient.getMe();
       return response;
     } catch (error: any) {
-      const status = error.response?.status;
+      const status = error.response?.status ?? 0;
       const message = error.response?.data?.message || 'Failed to fetch user';
-      return rejectWithValue(status === 401 ? '401 Unauthorized' : message);
+      // Pass the numeric status so the reducer can do an exact check.
+      // Never pass a string containing "401" for non-401 errors.
+      return rejectWithValue({ status, message });
     }
   }
 );
@@ -76,7 +80,10 @@ export const restoreAuth = createAsyncThunk(
       const refreshToken = await AsyncStorage.getItem('refreshToken');
       if (!token) return null;
       await apiClient.setToken(token);
-      return { token, refreshToken };
+      // Also restore the cached user object so screens work instantly
+      const cachedUser = await AsyncStorage.getItem('cachedUser');
+      const user = cachedUser ? JSON.parse(cachedUser) : null;
+      return { token, refreshToken, user };
     } catch {
       return rejectWithValue('Failed to restore auth');
     }
@@ -87,6 +94,7 @@ export const logoutUser = createAsyncThunk('auth/logout', async () => {
   try { await apiClient.logout(); } catch (_) {}
   await AsyncStorage.removeItem('token');
   await AsyncStorage.removeItem('refreshToken');
+  await AsyncStorage.removeItem('cachedUser');
 });
 
 export const updateProfile = createAsyncThunk(
@@ -108,6 +116,7 @@ export const googleLogin = createAsyncThunk(
       const response = await apiClient.googleMobileAuth(idToken);
       await apiClient.setToken(response.token);
       await AsyncStorage.setItem('refreshToken', response.refreshToken);
+      if (response.user) await AsyncStorage.setItem('cachedUser', JSON.stringify(response.user));
       return response;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.error || error.response?.data?.message || 'Google sign-in failed');
@@ -155,6 +164,8 @@ const authSlice = createSlice({
         const user = action.payload?.user || action.payload;
         state.user = user;
         state.isAuthenticated = true;
+        // Keep the cached copy fresh for next cold launch
+        AsyncStorage.setItem('cachedUser', JSON.stringify(user)).catch(() => {});
         // Only compute needsOnboarding if it hasn't been resolved yet.
         // Never flip it back to true once the user is in the main app.
         if (state.needsOnboarding) {
@@ -162,12 +173,11 @@ const authSlice = createSlice({
         }
       })
       .addCase(getMe.rejected, (state, action) => {
-        // Only log out on an explicit 401 (token invalid/expired).
-        // Network errors or server errors should NOT clear the session —
-        // that's what caused the profile tab redirecting to login.
-        const payload = action.payload as string | undefined;
-        const is401 = payload?.includes('401') || payload?.includes('Not authenticated') || payload?.includes('Unauthorized');
-        if (is401) {
+        // Only log out on an exact HTTP 401. Network errors, timeouts, and
+        // server errors (5xx) must NOT clear the session — the user has a
+        // valid token; we just can't reach the server right now.
+        const payload = action.payload as { status: number; message: string } | undefined;
+        if (payload?.status === 401) {
           state.isAuthenticated = false;
           state.user = null;
           state.token = null;
@@ -180,6 +190,10 @@ const authSlice = createSlice({
           state.token = action.payload.token;
           state.refreshToken = action.payload.refreshToken;
           state.isAuthenticated = true;
+          // Restore cached user so screens render immediately without waiting for getMe
+          if (action.payload.user) {
+            state.user = action.payload.user;
+          }
         }
       })
 

@@ -2,7 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Text } from 'react-native';
-import { COLORS } from '../constants';
+import { useTheme } from '../constants';
 
 // Tab screens
 import { HomeScreen } from '../screens/home/HomeScreen';
@@ -63,13 +63,15 @@ const TabIcon = ({ label, focused }: { label: string; focused: boolean }) => {
   return <Text style={{ fontSize: focused ? 22 : 19, opacity: focused ? 1 : 0.55 }}>{icons[label]}</Text>;
 };
 
-const TabNavigator = () => (
+const TabNavigator = () => {
+  const C = useTheme();
+  return (
   <Tab.Navigator
     screenOptions={({ route }) => ({
       headerShown: false,
       tabBarIcon: ({ focused }) => <TabIcon label={route.name} focused={focused} />,
-      tabBarActiveTintColor: COLORS.primary,
-      tabBarInactiveTintColor: COLORS.gray,
+      tabBarActiveTintColor: C.primary,
+      tabBarInactiveTintColor: C.gray,
       tabBarStyle: {
         borderTopWidth: 0,
         elevation: 12,
@@ -79,7 +81,7 @@ const TabNavigator = () => (
         height: 64,
         paddingBottom: 8,
         paddingTop: 4,
-        backgroundColor: '#fff',
+        backgroundColor: C.tabBarBg,
       },
       tabBarLabelStyle: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
     })}
@@ -89,7 +91,8 @@ const TabNavigator = () => (
     <Tab.Screen name="Matches" component={MatchesScreen} />
     <Tab.Screen name="Profile" component={ProfileScreen} />
   </Tab.Navigator>
-);
+  );
+};
 
 export const MainNavigator = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>

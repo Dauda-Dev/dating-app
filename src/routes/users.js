@@ -129,6 +129,33 @@ router.post('/last-active', authenticateJWT, userController.updateLastActive);
 
 /**
  * @swagger
+ * /api/users/push-token:
+ *   put:
+ *     summary: Register or update device push token
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - pushToken
+ *             properties:
+ *               pushToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Push token registered
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.put('/push-token', authenticateJWT, userController.registerPushToken);
+
+/**
+ * @swagger
  * /api/users/search:
  *   get:
  *     summary: Search for users

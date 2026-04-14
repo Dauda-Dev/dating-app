@@ -1,5 +1,6 @@
 const StealService = require('../services/StealService');
 const EmailService = require('../services/EmailService');
+const PushNotificationService = require('../services/PushNotificationService');
 const db = require('../config/database');
 
 module.exports = {
@@ -11,13 +12,21 @@ module.exports = {
 
       const request = await StealService.createStealRequest(requesterId, targetUserId);
       
-      // Send notification email to target
+      // Send email + push notification to target
       try {
         const requester = await db.User.findByPk(requesterId);
         const target = await db.User.findByPk(targetUserId);
-        
+
         if (target && target.email && requester) {
           await EmailService.sendStealNotification(target.email, requester.firstName);
+        }
+        if (target?.pushToken) {
+          await PushNotificationService.sendPush(
+            target.pushToken,
+            'Someone wants to steal you! 💘',
+            `${requester?.firstName || 'Someone'} sent you a steal request on Ovally.`,
+            { type: 'steal_request', requesterId }
+          );
         }
       } catch (emailErr) {
         console.error('Error sending steal notification:', emailErr);

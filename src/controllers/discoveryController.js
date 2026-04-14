@@ -2,6 +2,7 @@ const DiscoveryService = require('../services/DiscoveryService');
 const MatchService = require('../services/MatchService');
 const EmailService = require('../services/EmailService');
 const LikeQuotaService = require('../services/LikeQuotaService');
+const PushNotificationService = require('../services/PushNotificationService');
 const db = require('../config/database');
 
 module.exports = {
@@ -73,7 +74,7 @@ module.exports = {
         };
       }
       
-      // Send email notifications on match or super-like
+      // Send email + push notifications on match or super-like
       try {
         if (result.matched) {
           const matchRecord = await MatchService.getMatchById(result.match.id);
@@ -82,13 +83,32 @@ module.exports = {
             if (toUser?.email) {
               await EmailService.sendMatchNotification(toUser.email, toUser.firstName);
             }
+            // Push notification to matched user
+            const toUserFull = await db.User.findByPk(toUser?.id, { attributes: ['pushToken', 'firstName'] });
+            const fromUserFull = await db.User.findByPk(fromUserId, { attributes: ['firstName'] });
+            if (toUserFull?.pushToken) {
+              await PushNotificationService.sendPush(
+                toUserFull.pushToken,
+                "It's a Match! 🎉",
+                `You matched with ${fromUserFull?.firstName || 'someone'}! Start chatting now.`,
+                { type: 'match', matchId: result.match?.id }
+              );
+            }
           }
         } else if (likeType === 'super_like') {
-          // Notify the target that someone super-liked them (Premium/Gold feature feel)
-          const targetUser = await db.User.findByPk(targetUserId, { attributes: ['email', 'firstName'] });
+          const targetUser = await db.User.findByPk(targetUserId, { attributes: ['email', 'firstName', 'pushToken'] });
           const senderUser = await db.User.findByPk(fromUserId, { attributes: ['firstName'] });
           if (targetUser?.email && senderUser) {
             await EmailService.sendSuperLikeNotification(targetUser.email, targetUser.firstName, senderUser.firstName);
+          }
+          // Push notification for super-like
+          if (targetUser?.pushToken) {
+            await PushNotificationService.sendPush(
+              targetUser.pushToken,
+              "Someone Super Liked you! ⭐",
+              `${senderUser?.firstName || 'Someone'} sent you a super like on Ovally!`,
+              { type: 'super_like', fromUserId }
+            );
           }
         }
       } catch (emailErr) {

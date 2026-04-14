@@ -9,6 +9,7 @@ const API_BASE_URL = 'https://dating-app-xgvv.onrender.com/api'; // Android emul
 class ApiClient {
   private client: AxiosInstance;
   private token: string | null = null;
+  private _refreshing: Promise<string | null> | null = null;
 
   constructor() {
     this.client = axios.create({
@@ -30,12 +31,58 @@ class ApiClient {
     this.client.interceptors.response.use(
       (res) => res,
       async (error) => {
-        if (error.response?.status === 401) {
-          await this.clearToken();
+        const originalRequest = error.config;
+        // On 401, attempt a silent token refresh exactly once per request
+        if (error.response?.status === 401 && !originalRequest._retried) {
+          originalRequest._retried = true;
+          try {
+            const newToken = await this._silentRefresh();
+            if (newToken) {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              return this.client(originalRequest);
+            }
+          } catch {
+            // Refresh failed — let the 401 propagate so Redux can sign the user out
+          }
         }
         return Promise.reject(error);
       }
     );
+  }
+
+  /** Exchange the stored refreshToken for a new access token.
+   *  Concurrent calls share a single in-flight request.
+   *  IMPORTANT: Only clears tokens on definitive auth rejection (401/403).
+   *  Network errors, timeouts, and server errors are treated as transient —
+   *  tokens are preserved so the user stays logged in on the next app open. */
+  private async _silentRefresh(): Promise<string | null> {
+    if (this._refreshing) return this._refreshing;
+    this._refreshing = (async () => {
+      try {
+        const storedRefresh = await AsyncStorage.getItem('refreshToken');
+        if (!storedRefresh) return null;
+        const r = await axios.post(
+          `${API_BASE_URL}${API_ENDPOINTS.REFRESH}`,
+          { refreshToken: storedRefresh },
+          { timeout: 10000 },
+        );
+        const { token, refreshToken: newRefresh } = r.data;
+        await this.setToken(token);
+        if (newRefresh) await AsyncStorage.setItem('refreshToken', newRefresh);
+        return token as string;
+      } catch (err: any) {
+        const status = err?.response?.status;
+        // Only wipe tokens if the server explicitly says the refresh token is invalid.
+        // Network timeouts (no response) or 5xx errors are transient — keep tokens.
+        if (status === 401 || status === 403) {
+          await this.clearToken();
+        }
+        return null;
+      } finally {
+        this._refreshing = null;
+      }
+    })();
+    return this._refreshing;
   }
 
   async setToken(token: string) {
@@ -47,6 +94,7 @@ class ApiClient {
     this.token = null;
     await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('refreshToken');
+    await AsyncStorage.removeItem('cachedUser');
   }
 
   async getStoredToken(): Promise<string | null> {
@@ -267,6 +315,12 @@ class ApiClient {
 
   async googleMobileAuth(idToken: string) {
     const r = await this.client.post(API_ENDPOINTS.GOOGLE_MOBILE_AUTH, { idToken });
+    return r.data;
+  }
+
+  // ── Notifications ──────────────────────────────────────────────────────────
+  async registerPushToken(pushToken: string) {
+    const r = await this.client.put('/users/push-token', { pushToken });
     return r.data;
   }
 

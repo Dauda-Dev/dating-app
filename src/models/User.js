@@ -135,6 +135,11 @@ module.exports = (sequelize, DataTypes) => {
     longitude: {
       type: DataTypes.DECIMAL(11, 8),
       allowNull: true
+    },
+    pushToken: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'push_token'
     }
   }, {
     tableName: 'users',

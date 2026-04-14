@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { Op } = require('sequelize');
+const PushNotificationService = require('../services/PushNotificationService');
 
 const CHAT_STATUSES = ['video_call_completed', 'date_accepted', 'post_date_open'];
 const PAGE_LIMIT = 30;

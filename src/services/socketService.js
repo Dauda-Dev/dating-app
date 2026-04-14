@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
+const PushNotificationService = require('./PushNotificationService');
 
 /**
  * Returns the list of Socket.io room names a user belongs to
@@ -121,6 +122,34 @@ function initSocketService(httpServer) {
 
         // Deliver to all sockets in the match room (both users)
         io.to(`match:${matchId}`).emit('new_message', payload);
+
+        // Send push notification to the OTHER user if they're not in the room
+        // (i.e. app is backgrounded or closed)
+        try {
+          const recipientId = match.user1Id === userId ? match.user2Id : match.user1Id;
+          const room = io.sockets.adapter.rooms.get(`match:${matchId}`);
+          // Check if any socket belonging to recipient is in the room
+          const recipientSockets = await io.in(`match:${matchId}`).fetchSockets();
+          const recipientOnline = recipientSockets.some((s) => s.userId === recipientId);
+
+          if (!recipientOnline) {
+            const recipient = await db.User.findByPk(recipientId, {
+              attributes: ['pushToken', 'firstName'],
+            });
+            const sender = await db.User.findByPk(userId, { attributes: ['firstName'] });
+
+            if (recipient?.pushToken) {
+              await PushNotificationService.sendPush(
+                recipient.pushToken,
+                sender?.firstName || 'New message',
+                content.trim().slice(0, 100),
+                { type: 'new_message', matchId: String(matchId) }
+              );
+            }
+          }
+        } catch (pushErr) {
+          console.warn('[socket] Push notification failed for new message:', pushErr.message);
+        }
       } catch (err) {
         console.error('[socket] send_message error:', err.message);
         socket.emit('error', { message: 'Failed to send message' });

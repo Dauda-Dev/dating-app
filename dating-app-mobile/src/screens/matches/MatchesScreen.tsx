@@ -10,7 +10,7 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchMatches } from '../../store/slices/matchSlice';
 import { loadUnreadCounts } from '../../store/slices/chatSlice';
 import { apiClient } from '../../services/apiClient';
-import { COLORS, MATCH_STATUS_CONFIG } from '../../constants';
+import { COLORS, MATCH_STATUS_CONFIG, useTheme } from '../../constants';
 import { MainStackParamList } from '../../navigation/MainNavigator';
 import { Match, User } from '../../types';
 import { TutorialOverlay } from '../../components/common/TutorialOverlay';
@@ -25,6 +25,7 @@ export const MatchesScreen: React.FC = () => {
   const { user } = useAppSelector((s) => s.auth);
   const { matches, isLoading } = useAppSelector((s) => s.matches);
   const { unreadCounts } = useAppSelector((s) => s.chat);
+  const C = useTheme();
 
   const [tab, setTab] = useState<'matches' | 'liked-me'>('matches');
   const [likedMe, setLikedMe] = useState<User[]>([]);
@@ -70,7 +71,7 @@ export const MatchesScreen: React.FC = () => {
       ? Math.floor((Date.now() - new Date(item.dateOfBirth).getTime()) / 3.156e10)
       : null;
     return (
-      <View style={styles.msgRow}>
+      <View style={[styles.msgRow, { backgroundColor: C.card }]}>
         <View style={styles.avatarWrap}>
           {item.profilePhoto
             ? <Image source={{ uri: item.profilePhoto }} style={styles.msgAvatar} />
@@ -94,7 +95,7 @@ export const MatchesScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: C.background }]}>
       <TutorialOverlay />
       <HelpButton onPress={() => setShowHelp(true)} />
       <HelpModal visible={showHelp} onClose={() => setShowHelp(false)} currentScreen="Matches" />
@@ -175,7 +176,7 @@ export const MatchesScreen: React.FC = () => {
                 return (
                   <TouchableOpacity
                     key={item.id}
-                    style={styles.msgRow}
+                    style={[styles.msgRow, { backgroundColor: C.card }]}
                     onPress={() => canChat
                       ? navigation.navigate('Chat', { matchId: item.id })
                       : navigation.navigate('MatchDetails', { matchId: item.id })}
@@ -217,7 +218,7 @@ export const MatchesScreen: React.FC = () => {
                 return (
                   <TouchableOpacity
                     key={item.id}
-                    style={styles.msgRow}
+                    style={[styles.msgRow, { backgroundColor: C.card }]}
                     onPress={() => navigation.navigate('MatchDetails', { matchId: item.id })}
                     activeOpacity={0.85}
                   >
@@ -252,7 +253,7 @@ export const MatchesScreen: React.FC = () => {
               {broken.map((item) => {
                 const partner = getPartner(item);
                 return (
-                  <View key={item.id} style={[styles.msgRow, styles.msgRowDim]}>
+                  <View key={item.id} style={[styles.msgRow, styles.msgRowDim, { backgroundColor: C.card }]}>
                     <View style={styles.avatarWrap}>
                       {partner?.profilePhoto
                         ? <Image source={{ uri: partner.profilePhoto }} style={[styles.msgAvatar, { opacity: 0.5 }]} />

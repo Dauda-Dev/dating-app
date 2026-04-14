@@ -10,7 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchMatches } from '../../store/slices/matchSlice';
 import { fetchPendingSteals, fetchSentSteals } from '../../store/slices/stealSlice';
-import { COLORS, MATCH_STATUS_CONFIG } from '../../constants';
+import { COLORS, MATCH_STATUS_CONFIG, useTheme } from '../../constants';
 import { MainStackParamList } from '../../navigation/MainNavigator';
 import { Match } from '../../types';
 import { TutorialOverlay } from '../../components/common/TutorialOverlay';
@@ -73,8 +73,9 @@ const ActivityItem: React.FC<{
   onPress: () => void;
 }> = ({ match, partner, onPress }) => {
   const config = MATCH_STATUS_CONFIG[match.status];
+  const C = useTheme();
   return (
-    <TouchableOpacity style={styles.activityCard} onPress={onPress} activeOpacity={0.85}>
+    <TouchableOpacity style={[styles.activityCard, { backgroundColor: C.card }]} onPress={onPress} activeOpacity={0.85}>
       <View style={styles.activityPhotoWrap}>
         {partner?.profilePhoto ? (
           <Image source={{ uri: partner.profilePhoto }} style={styles.activityPhoto} />
@@ -114,6 +115,7 @@ export const HomeScreen: React.FC = () => {
   const { incomingRequests, sentRequests } = useAppSelector((s) => s.steals);
   const scrollY = useRef(new Animated.Value(0)).current;
   const [showHelp, setShowHelp] = useState(false);
+  const C = useTheme();
 
   const load = useCallback(() => {
     dispatch(fetchMatches());
@@ -163,7 +165,7 @@ export const HomeScreen: React.FC = () => {
   ];
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: C.background }]}>
       <StatusBar barStyle="light-content" />
       <TutorialOverlay />
       <HelpButton onPress={() => setShowHelp(true)} />
@@ -247,7 +249,7 @@ export const HomeScreen: React.FC = () => {
           {statsData.map((s, i) => (
             <TouchableOpacity
               key={i}
-              style={styles.statCard}
+              style={[styles.statCard, { backgroundColor: C.card }]}
               activeOpacity={s.onPress ? 0.75 : 1}
               onPress={s.onPress}
             >

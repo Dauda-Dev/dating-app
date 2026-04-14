@@ -4,8 +4,8 @@ const jwt = require('jsonwebtoken');
  * Generate JWT token
  */
 const generateToken = (userId, email, expiresIn) => {
-  // Fall back to '7d' if env var is missing or empty string (jsonwebtoken rejects empty/undefined)
-  const expiry = expiresIn || process.env.JWT_EXPIRY || '7d';
+  // Fall back to '30d' if env var is missing or empty string (jsonwebtoken rejects empty/undefined)
+  const expiry = expiresIn || process.env.JWT_EXPIRY || '30d';
   return jwt.sign(
     { userId, email },
     process.env.JWT_SECRET,

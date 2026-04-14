@@ -13,7 +13,7 @@ import {
 } from '../../store/slices/discoverySlice';
 import { requestSteal } from '../../store/slices/stealSlice';
 import { apiClient } from '../../services/apiClient';
-import { COLORS } from '../../constants';
+import { COLORS, useTheme } from '../../constants';
 import { DiscoveryUser } from '../../types';
 import { TutorialOverlay } from '../../components/common/TutorialOverlay';
 import { HelpButton } from '../../components/common/HelpButton';
@@ -38,6 +38,7 @@ export const DiscoveryScreen: React.FC = () => {
   const { users, currentIndex, isLoading, filters } = useAppSelector((s) => s.discovery);
   const { user } = useAppSelector((s) => s.auth);
   const { hasSeenTutorial } = useAppSelector((s) => s.tutorial);
+  const C = useTheme();
   const [photoIndex, setPhotoIndex] = useState(0);
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
   const [isUndoing, setIsUndoing] = useState(false);
@@ -253,7 +254,7 @@ export const DiscoveryScreen: React.FC = () => {
 
   if (isLoading) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: C.background }]}>
         <ActivityIndicator size="large" color={COLORS.primary} />
         <Text style={styles.loadingText}>Finding matches…</Text>
       </View>
@@ -264,7 +265,7 @@ export const DiscoveryScreen: React.FC = () => {
 
   if (!currentUser) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: C.background }]}>
         <Text style={styles.emptyEmoji}>🎉</Text>
         <Text style={styles.emptyTitle}>You've seen everyone!</Text>
         <Text style={styles.emptySubtitle}>Check back later for new profiles</Text>
@@ -279,7 +280,7 @@ export const DiscoveryScreen: React.FC = () => {
     (currentUser.dateOfBirth ? Math.floor((Date.now() - new Date(currentUser.dateOfBirth).getTime()) / 3.156e10) : null);
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: C.background }]}>
       <TutorialOverlay />
       <HelpButton onPress={() => setShowHelp(true)} />
       <HelpModal visible={showHelp} onClose={() => setShowHelp(false)} currentScreen="Discover" />
