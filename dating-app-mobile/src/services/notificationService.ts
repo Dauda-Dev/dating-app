@@ -23,10 +23,14 @@ Notifications.setNotificationHandler({
   }),
 });
 
+const RETRY_DELAYS_MS = [3_000, 8_000, 20_000, 60_000]; // 4 attempts after first failure
+
 class NotificationService {
   private _subscription: Notifications.Subscription | null = null;
   private _tapSubscription: Notifications.Subscription | null = null;
   private _registered = false;
+  private _retryCount = 0;
+  private _retryTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Request permission, obtain the FCM device token and register it with
@@ -35,6 +39,9 @@ class NotificationService {
    * @returns {Promise<boolean>} true if permission was granted and token obtained
    */
   async register(): Promise<boolean> {
+    // Notifications temporarily disabled
+    return false;
+
     if (this._registered) return true;
 
     // Push notifications require a physical device
@@ -75,6 +82,13 @@ class NotificationService {
 
       console.log('[notificationService] FCM token obtained');
 
+      // Reset retry state on success
+      this._retryCount = 0;
+      if (this._retryTimer != null) {
+        clearTimeout(this._retryTimer as unknown as number);
+        this._retryTimer = null;
+      }
+
       // Register with backend (fire-and-forget — don't block app startup)
       apiClient.registerPushToken(fcmToken).catch((e) =>
         console.warn('[notificationService] Failed to register token with backend:', e?.message)
@@ -84,7 +98,22 @@ class NotificationService {
       this._registered = true;
       return true;
     } catch (err: any) {
-      console.warn('[notificationService] Failed to get FCM token:', err?.message);
+      const msg: string = err?.message ?? '';
+      const isTransient =
+        msg.includes('SERVICE_NOT_AVAILABLE') ||
+        msg.includes('NETWORK_ERROR') ||
+        msg.includes('TOO_MANY_REGISTRATIONS');
+
+      if (isTransient && this._retryCount < RETRY_DELAYS_MS.length) {
+        const delay = RETRY_DELAYS_MS[this._retryCount];
+        this._retryCount += 1;
+        console.warn(
+          `[notificationService] FCM token fetch failed (${msg}), retrying in ${delay / 1000}s (attempt ${this._retryCount}/${RETRY_DELAYS_MS.length})`
+        );
+        this._retryTimer = setTimeout(() => this.register(), delay);
+      } else {
+        console.warn('[notificationService] Failed to get FCM token:', msg, '— notifications disabled');
+      }
       return false;
     }
   }
@@ -124,6 +153,11 @@ class NotificationService {
     this._subscription = null;
     this._tapSubscription = null;
     this._registered = false;
+    this._retryCount = 0;
+    if (this._retryTimer != null) {
+      clearTimeout(this._retryTimer as unknown as number);
+      this._retryTimer = null;
+    }
   }
 }
 

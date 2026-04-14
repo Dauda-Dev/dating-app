@@ -174,6 +174,7 @@ module.exports = {
   async me(req, res, next) {
     try {
       const userId = req.userId || req.user?.userId;
+      console.log('[me] req.userId:', req.userId, '| req.user:', JSON.stringify(req.user));
       if (!userId) throw createError('Not authenticated', 401);
 
       const user = await db.User.findByPk(userId, { include: [{ model: db.Profile, as: 'profile' }] });

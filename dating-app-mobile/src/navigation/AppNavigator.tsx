@@ -24,11 +24,14 @@ export const AppNavigator = () => {
     const init = async () => {
       const result = await dispatch(restoreAuth());
       if (restoreAuth.fulfilled.match(result) && result.payload) {
-        // Best-effort: fetch the user profile. If this fails due to a network
-        // issue (e.g. Render cold-start timeout) the user is still kept logged
-        // in because restoreAuth already set isAuthenticated = true.
-        // Only a definitive 401 (handled in authSlice) will sign them out.
-        dispatch(getMe()).catch(() => {/* transient — ignore */});
+        // Fetch the user profile. Retry once after 4 s to handle Render cold-starts
+        // where the server needs a moment before it can verify JWTs.
+        // restoreAuth already set isAuthenticated = true, so the user stays in
+        // the app regardless — this just hydrates the user object.
+        const getMeResult = await dispatch(getMe());
+        if (getMe.rejected.match(getMeResult)) {
+          setTimeout(() => dispatch(getMe()), 4000);
+        }
       }
       setInitializing(false);
     };

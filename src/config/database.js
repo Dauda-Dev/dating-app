@@ -13,11 +13,12 @@ const sequelizeOptions = {
     acquire: 30000,
     idle: 10000,
   },
-  ...(isProduction && {
+  // Use SSL whenever connecting via DATABASE_URL (Render requires it)
+  ...(process.env.DATABASE_URL && {
     dialectOptions: {
       ssl: {
         require: true,
-        rejectUnauthorized: false, // Required for Render's managed Postgres
+        rejectUnauthorized: false,
       },
     },
   }),

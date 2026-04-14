@@ -19,6 +19,9 @@ class ApiClient {
     });
 
     this.client.interceptors.request.use(async (config) => {
+      // Don't overwrite the Authorization header on retried requests —
+      // the response interceptor already set the correct new token on them.
+      if ((config as any)._retried) return config;
       if (!this.token) {
         this.token = await AsyncStorage.getItem('token');
       }
@@ -38,10 +41,17 @@ class ApiClient {
           try {
             const newToken = await this._silentRefresh();
             if (newToken) {
+              // Force the request interceptor to use the new token
+              // by setting it directly on the config (interceptor will overwrite with this.token,
+              // which is already set to newToken by _silentRefresh → setToken)
               originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              console.log('[apiClient] retrying', originalRequest.url, 'with new token (last 10):', newToken.slice(-10));
               return this.client(originalRequest);
+            } else {
+              console.warn('[apiClient] _silentRefresh returned null — cannot retry', originalRequest.url);
             }
-          } catch {
+          } catch (refreshErr: any) {
+            console.warn('[apiClient] refresh threw:', refreshErr?.message);
             // Refresh failed — let the 401 propagate so Redux can sign the user out
           }
         }
@@ -67,6 +77,7 @@ class ApiClient {
           { timeout: 10000 },
         );
         const { token, refreshToken: newRefresh } = r.data;
+        console.log('[apiClient] refresh succeeded, new token (last 10):', (token as string)?.slice(-10));
         await this.setToken(token);
         if (newRefresh) await AsyncStorage.setItem('refreshToken', newRefresh);
         return token as string;
@@ -79,7 +90,11 @@ class ApiClient {
         }
         return null;
       } finally {
-        this._refreshing = null;
+        // Keep the dedup promise alive for 5 s so any retries that arrive
+        // slightly after the first refresh completes don't trigger a second
+        // refresh (which would rotate the refresh token again and invalidate
+        // the tokens already issued to the first batch of retries).
+        setTimeout(() => { this._refreshing = null; }, 5000);
       }
     })();
     return this._refreshing;

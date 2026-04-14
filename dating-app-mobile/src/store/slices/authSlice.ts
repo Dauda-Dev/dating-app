@@ -67,6 +67,9 @@ export const getMe = createAsyncThunk(
       const message = error.response?.data?.message || 'Failed to fetch user';
       // Pass the numeric status so the reducer can do an exact check.
       // Never pass a string containing "401" for non-401 errors.
+      // NOTE: by the time this catch runs, the response interceptor has already
+      // attempted a token refresh + retry. A 401 here means the refresh also
+      // failed, so it is safe to sign the user out.
       return rejectWithValue({ status, message });
     }
   }
@@ -176,8 +179,14 @@ const authSlice = createSlice({
         // Only log out on an exact HTTP 401. Network errors, timeouts, and
         // server errors (5xx) must NOT clear the session — the user has a
         // valid token; we just can't reach the server right now.
+        // NOTE: by the time this runs the response interceptor has already
+        // attempted a silent token refresh + retry. A 401 here means the
+        // refresh also failed.
+        // However, if we still have a refreshToken in state, treat this as a
+        // transient failure (e.g. Render cold-start) and keep the user in the
+        // app — the next request will re-attempt the refresh.
         const payload = action.payload as { status: number; message: string } | undefined;
-        if (payload?.status === 401) {
+        if (payload?.status === 401 && !state.refreshToken) {
           state.isAuthenticated = false;
           state.user = null;
           state.token = null;

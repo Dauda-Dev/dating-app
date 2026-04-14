@@ -21,7 +21,7 @@ const authenticateJWT = async (req, res, next) => {
 
     // Check live account status (suspension / deactivation)
     const user = await db.User.findByPk(decoded.userId, {
-      attributes: ['id', 'isActive', 'isSuspended', 'suspendedUntil', 'role'],
+      attributes: ['id', 'isActive', 'isSuspended'],
     });
 
     if (!user || !user.isActive) {
@@ -29,29 +29,28 @@ const authenticateJWT = async (req, res, next) => {
     }
 
     if (user.isSuspended) {
-      const until = user.suspendedUntil;
-      if (!until || new Date(until) > new Date()) {
-        const msg = until
-          ? `Account suspended until ${new Date(until).toLocaleDateString()}.`
-          : 'Account is suspended.';
-        return res.status(403).json({ error: msg, suspended: true });
-      }
-      // Suspension expired — auto-lift
-      await user.update({ isSuspended: false, suspendedUntil: null });
+      return res.status(403).json({ error: 'Account is suspended.', suspended: true });
     }
 
-    req.userRole = user.role;
     next();
   } catch (error) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError' || error.name === 'NotBeforeError') {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+    // DB or other unexpected error — log it and return 401 so clients retry
+    console.error('[authenticateJWT] unexpected error:', error.message, error.name);
+    return res.status(401).json({ error: 'Authentication failed', detail: error.message });
   }
 };
 
 /**
  * Require admin or moderator role
+ * NOTE: 'role' column not yet in DB schema — all admin routes are blocked until
+ * the column is added and req.userRole is populated in authenticateJWT.
  */
 const requireAdmin = (req, res, next) => {
-  if (!['admin', 'moderator'].includes(req.userRole)) {
+  // req.userRole is undefined until 'role' column is added to the users table
+  if (!req.userRole || !['admin', 'moderator'].includes(req.userRole)) {
     return res.status(403).json({ error: 'Admin access required.' });
   }
   next();
