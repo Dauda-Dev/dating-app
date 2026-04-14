@@ -21,3 +21,4 @@ yarn-error.*
 .metro-health-check*
 dating-app-mobile/node_modules/
 dating-app-web/node_modules/
+.uberapp-5da04-firebase-adminsdk-7ji00-30f4e7120fe.json
