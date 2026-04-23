@@ -39,9 +39,6 @@ class NotificationService {
    * @returns {Promise<boolean>} true if permission was granted and token obtained
    */
   async register(): Promise<boolean> {
-    // Notifications temporarily disabled
-    return false;
-
     if (this._registered) return true;
 
     // Push notifications require a physical device

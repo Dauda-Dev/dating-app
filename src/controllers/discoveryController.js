@@ -2,7 +2,7 @@ const DiscoveryService = require('../services/DiscoveryService');
 const MatchService = require('../services/MatchService');
 const EmailService = require('../services/EmailService');
 const LikeQuotaService = require('../services/LikeQuotaService');
-const PushNotificationService = require('../services/PushNotificationService');
+const NotificationDispatchService = require('../services/NotificationDispatchService');
 const db = require('../config/database');
 
 module.exports = {
@@ -84,32 +84,29 @@ module.exports = {
               await EmailService.sendMatchNotification(toUser.email, toUser.firstName);
             }
             // Push notification to matched user
-            const toUserFull = await db.User.findByPk(toUser?.id, { attributes: ['pushToken', 'firstName'] });
+            const toUserFull = await db.User.findByPk(toUser?.id, { attributes: ['id', 'firstName'] });
             const fromUserFull = await db.User.findByPk(fromUserId, { attributes: ['firstName'] });
-            if (toUserFull?.pushToken) {
-              await PushNotificationService.sendPush(
-                toUserFull.pushToken,
-                "It's a Match! 🎉",
-                `You matched with ${fromUserFull?.firstName || 'someone'}! Start chatting now.`,
-                { type: 'match', matchId: result.match?.id }
-              );
-            }
+            await NotificationDispatchService.sendToUser({
+              userId: toUserFull?.id,
+              type: 'match',
+              title: "It's a Match! 🎉",
+              body: `You matched with ${fromUserFull?.firstName || 'someone'}! Start chatting now.`,
+              data: { matchId: result.match?.id },
+            });
           }
         } else if (likeType === 'super_like') {
-          const targetUser = await db.User.findByPk(targetUserId, { attributes: ['email', 'firstName', 'pushToken'] });
+          const targetUser = await db.User.findByPk(targetUserId, { attributes: ['id', 'email', 'firstName'] });
           const senderUser = await db.User.findByPk(fromUserId, { attributes: ['firstName'] });
           if (targetUser?.email && senderUser) {
             await EmailService.sendSuperLikeNotification(targetUser.email, targetUser.firstName, senderUser.firstName);
           }
-          // Push notification for super-like
-          if (targetUser?.pushToken) {
-            await PushNotificationService.sendPush(
-              targetUser.pushToken,
-              "Someone Super Liked you! ⭐",
-              `${senderUser?.firstName || 'Someone'} sent you a super like on Ovally!`,
-              { type: 'super_like', fromUserId }
-            );
-          }
+          await NotificationDispatchService.sendToUser({
+            userId: targetUser?.id,
+            type: 'super_like',
+            title: 'Someone Super Liked you! ⭐',
+            body: `${senderUser?.firstName || 'Someone'} sent you a super like on Ovally!`,
+            data: { fromUserId },
+          });
         }
       } catch (emailErr) {
         console.error('Error sending like/match notification:', emailErr);

@@ -1,4 +1,6 @@
 const VideoService = require('../services/VideoService');
+const db = require('../config/database');
+const NotificationDispatchService = require('../services/NotificationDispatchService');
 const { createError } = require('../utils/helpers');
 
 module.exports = {
@@ -11,6 +13,23 @@ module.exports = {
       if (!matchId) throw createError('matchId required', 400);
 
       const result = await VideoService.initializeVideoSession(matchId, userId);
+
+      try {
+        const match = await db.Match.findByPk(matchId, { attributes: ['user1Id', 'user2Id'] });
+        if (match) {
+          const otherUserId = match.user1Id === userId ? match.user2Id : match.user1Id;
+          await NotificationDispatchService.sendToUser({
+            userId: otherUserId,
+            type: 'video_reminder',
+            title: 'Video call ready 📹',
+            body: 'Your match started a video session. Join now!',
+            data: { matchId, sessionId: result.sessionId },
+          });
+        }
+      } catch (notifyErr) {
+        console.warn('[videoController] video reminder notification failed:', notifyErr.message);
+      }
+
       return res.json(result);
     } catch (err) {
       next(err);

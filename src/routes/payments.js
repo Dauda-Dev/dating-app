@@ -44,6 +44,12 @@ router.get('/plans', paymentController.getPlans);
  */
 router.post('/initialize', authenticateJWT, paymentController.initializePayment);
 
+router.post('/store/initialize', authenticateJWT, paymentController.initializeStorePurchase);
+
+router.post('/store/validate', authenticateJWT, paymentController.validateStorePurchase);
+
+router.get('/entitlements', authenticateJWT, paymentController.getEntitlements);
+
 /**
  * @swagger
  * /api/payments/verify/{reference}:

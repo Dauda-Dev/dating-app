@@ -14,6 +14,22 @@ const SubscriptionTier = {
   GOLD: 'gold'
 };
 
+const SubscriptionProvider = {
+  NONE: 'none',
+  GOOGLE_PLAY: 'google_play',
+  APPLE_APP_STORE: 'apple_app_store',
+  PAYSTACK: 'paystack',
+};
+
+const SubscriptionStatus = {
+  INACTIVE: 'inactive',
+  ACTIVE: 'active',
+  GRACE_PERIOD: 'grace_period',
+  EXPIRED: 'expired',
+  REVOKED: 'revoked',
+  CANCELLED: 'cancelled',
+};
+
 module.exports = (sequelize, DataTypes) => {
   const User = sequelize.define('User', {
     id: {
@@ -78,6 +94,43 @@ module.exports = (sequelize, DataTypes) => {
       ),
       defaultValue: SubscriptionTier.FREE,
       field: 'subscription_tier'
+    },
+    subscriptionProvider: {
+      type: DataTypes.ENUM(
+        SubscriptionProvider.NONE,
+        SubscriptionProvider.GOOGLE_PLAY,
+        SubscriptionProvider.APPLE_APP_STORE,
+        SubscriptionProvider.PAYSTACK
+      ),
+      defaultValue: SubscriptionProvider.NONE,
+      field: 'subscription_provider'
+    },
+    subscriptionStatus: {
+      type: DataTypes.ENUM(
+        SubscriptionStatus.INACTIVE,
+        SubscriptionStatus.ACTIVE,
+        SubscriptionStatus.GRACE_PERIOD,
+        SubscriptionStatus.EXPIRED,
+        SubscriptionStatus.REVOKED,
+        SubscriptionStatus.CANCELLED
+      ),
+      defaultValue: SubscriptionStatus.INACTIVE,
+      field: 'subscription_status'
+    },
+    subscriptionProductId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'subscription_product_id'
+    },
+    subscriptionExpiresAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'subscription_expires_at'
+    },
+    subscriptionLastValidatedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'subscription_last_validated_at'
     },
     isEmailVerified: {
       type: DataTypes.BOOLEAN,
@@ -157,6 +210,12 @@ module.exports = (sequelize, DataTypes) => {
       },
       {
         fields: ['subscription_tier']
+      },
+      {
+        fields: ['subscription_provider']
+      },
+      {
+        fields: ['subscription_status']
       },
       {
         fields: ['is_active']

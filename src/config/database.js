@@ -52,6 +52,8 @@ db.StealRequest = require('../models/StealRequest')(sequelize, Sequelize.DataTyp
 db.Waitlist = require('../models/Waitlist')(sequelize);
 db.Message = require('../models/Message')(sequelize, Sequelize.DataTypes);
 db.Report = require('../models/Report')(sequelize, Sequelize.DataTypes);
+db.NotificationPreference = require('../models/NotificationPreference')(sequelize, Sequelize.DataTypes);
+db.AdEvent = require('../models/AdEvent')(sequelize, Sequelize.DataTypes);
 
 // Define associations
 // User - Profile (1:1)
@@ -169,6 +171,14 @@ db.Report.belongsTo(db.User, { foreignKey: 'reporterId', as: 'reporter' });
 // User - Report (1:N) - reported side
 db.User.hasMany(db.Report, { foreignKey: 'reportedUserId', as: 'reportsReceived' });
 db.Report.belongsTo(db.User, { foreignKey: 'reportedUserId', as: 'reportedUser' });
+
+// User - NotificationPreference (1:1)
+db.User.hasOne(db.NotificationPreference, { foreignKey: 'userId', as: 'notificationPreference' });
+db.NotificationPreference.belongsTo(db.User, { foreignKey: 'userId', as: 'user' });
+
+// User - AdEvent (1:N)
+db.User.hasMany(db.AdEvent, { foreignKey: 'userId', as: 'adEvents' });
+db.AdEvent.belongsTo(db.User, { foreignKey: 'userId', as: 'user' });
 
 // Add authenticate method to db object
 db.authenticate = async () => {

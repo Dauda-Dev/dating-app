@@ -328,6 +328,52 @@ class ApiClient {
     return r.data;
   }
 
+  async initializeStoreSubscription(tier: string, platform: 'android' | 'ios') {
+    const r = await this.client.post(API_ENDPOINTS.PAYMENT_STORE_INITIALIZE, { tier, platform });
+    return r.data;
+  }
+
+  async validateStoreSubscriptionPurchase(payload: {
+    tier: string;
+    platform: 'android' | 'ios';
+    productId: string;
+    purchaseToken?: string;
+    transactionId?: string;
+    receipt?: string;
+  }) {
+    const r = await this.client.post(API_ENDPOINTS.PAYMENT_STORE_VALIDATE, payload);
+    return r.data;
+  }
+
+  async getEntitlements() {
+    const r = await this.client.get(API_ENDPOINTS.PAYMENT_ENTITLEMENTS);
+    return r.data;
+  }
+
+  async getNotificationPreferences() {
+    const r = await this.client.get(API_ENDPOINTS.NOTIFICATION_PREFERENCES);
+    return r.data;
+  }
+
+  async updateNotificationPreferences(payload: Record<string, any>) {
+    const r = await this.client.put(API_ENDPOINTS.NOTIFICATION_PREFERENCES, payload);
+    return r.data;
+  }
+
+  async getAdsConfig() {
+    const r = await this.client.get(API_ENDPOINTS.ADS_CONFIG);
+    return r.data;
+  }
+
+  async trackAdEvent(payload: {
+    eventType: 'impression' | 'click' | 'close' | 'load_failed';
+    placement?: string;
+    metadata?: Record<string, any>;
+  }) {
+    const r = await this.client.post(API_ENDPOINTS.ADS_EVENTS, payload);
+    return r.data;
+  }
+
   async googleMobileAuth(idToken: string) {
     const r = await this.client.post(API_ENDPOINTS.GOOGLE_MOBILE_AUTH, { idToken });
     return r.data;

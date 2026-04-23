@@ -20,6 +20,7 @@ import { HelpButton } from '../../components/common/HelpButton';
 import { HelpModal } from '../../components/common/HelpModal';
 import { startTutorial, loadTutorialSeen } from '../../store/slices/tutorialSlice';
 import { DiscoveryFilterSheet } from '../../components/common/DiscoveryFilterSheet';
+import { swipeAdsService } from '../../services/swipeAdsService';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const SWIPE_THRESHOLD = SCREEN_W * 0.3;
@@ -69,6 +70,23 @@ export const DiscoveryScreen: React.FC = () => {
       // non-critical — don't block UI
     }
   }, [tier]);
+
+  const maybeShowSwipeAd = useCallback(async () => {
+    if (tier !== 'free') return;
+
+    const shouldShow = await swipeAdsService.shouldShowAfterSwipe();
+    if (!shouldShow) return;
+
+    try {
+      await swipeAdsService.showInterstitial();
+    } catch {
+      // non-critical — keep swiping smooth if ads fail
+    }
+  }, [tier]);
+
+  useEffect(() => {
+    void swipeAdsService.syncConfigFromBackend();
+  }, []);
 
   // Re-fetch every time this tab is focused so swiped users don't reappear
   useFocusEffect(
@@ -135,6 +153,7 @@ export const DiscoveryScreen: React.FC = () => {
       position.setValue({ x: 0, y: 0 });
       const result = await dispatch(likeUser(currentUser.id));
       if (likeUser.fulfilled.match(result)) {
+        void maybeShowSwipeAd();
         if (quota && !quota.unlimited && quota.remaining !== null) {
           setQuota((q) => q ? { ...q, remaining: Math.max(0, (q.remaining ?? 1) - 1), used: (q.used ?? 0) + 1 } : q);
         }
@@ -181,6 +200,7 @@ export const DiscoveryScreen: React.FC = () => {
       position.setValue({ x: 0, y: 0 });
       const result = await dispatch(superLikeUser(currentUser.id));
       if (superLikeUser.fulfilled.match(result)) {
+        void maybeShowSwipeAd();
         if (quota && !quota.unlimited && quota.remaining !== null) {
           setQuota((q) => q ? { ...q, remaining: Math.max(0, (q.remaining ?? 1) - 1), used: (q.used ?? 0) + 1 } : q);
         }
@@ -218,6 +238,7 @@ export const DiscoveryScreen: React.FC = () => {
     }).start(() => {
       position.setValue({ x: 0, y: 0 });
       dispatch(passUser(currentUser.id));
+      void maybeShowSwipeAd();
     });
   };
 

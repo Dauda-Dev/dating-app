@@ -21,7 +21,7 @@ const authenticateJWT = async (req, res, next) => {
 
     // Check live account status (suspension / deactivation)
     const user = await db.User.findByPk(decoded.userId, {
-      attributes: ['id', 'isActive', 'isSuspended'],
+      attributes: ['id', 'isActive', 'isSuspended', 'subscriptionTier'],
     });
 
     if (!user || !user.isActive) {
@@ -31,6 +31,8 @@ const authenticateJWT = async (req, res, next) => {
     if (user.isSuspended) {
       return res.status(403).json({ error: 'Account is suspended.', suspended: true });
     }
+
+    req.userTier = user.subscriptionTier;
 
     next();
   } catch (error) {

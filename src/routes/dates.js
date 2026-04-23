@@ -133,5 +133,7 @@ router.post('/accept', authenticateJWT, matchValidator, handleValidationErrors, 
  */
 router.post('/complete', authenticateJWT, matchValidator, handleValidationErrors, dateController.complete);
 
+router.post('/reminder', authenticateJWT, matchValidator, handleValidationErrors, dateController.sendReminder);
+
 module.exports = router;
 

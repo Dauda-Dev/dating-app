@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, ActivityIndicator, Modal, Linking,
+  Alert, ActivityIndicator, Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppSelector } from '../../store/hooks';
@@ -83,7 +83,7 @@ export const SubscriptionScreen: React.FC = () => {
 
     Alert.alert(
       `Upgrade to ${tier.charAt(0).toUpperCase() + tier.slice(1)}?`,
-      `You will be redirected to Paystack to complete your payment.`,
+      'Continue to in-app subscription checkout?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -91,50 +91,25 @@ export const SubscriptionScreen: React.FC = () => {
           onPress: async () => {
             try {
               setLoading(tier);
-              const result = await apiClient.initializePayment(tier);
+              const platform: 'android' | 'ios' = Platform.OS === 'ios' ? 'ios' : 'android';
+              const result = await apiClient.initializeStoreSubscription(tier, platform);
               setLoading(null);
 
-              // Open Paystack payment page in browser
-              // After payment, user taps "Verify" or it auto-verifies via webhook
               Alert.alert(
-                '💳 Payment Ready',
-                "Tap \"Open Payment\" to complete your purchase. Come back and tap \"I've Paid\" to verify.",
+                '🧾 Subscription Started',
+                `Plan: ${tier.toUpperCase()}\nProduct: ${result.productId}\n\nNext step: complete purchase in native billing and submit purchase token/receipt for server validation.`,
                 [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Open Payment',
-                    onPress: () => Linking.openURL(result.authorizationUrl),
-                  },
-                  {
-                    text: "I've Paid",
-                    onPress: () => handleVerify(result.reference),
-                  },
+                  { text: 'OK', style: 'default' },
                 ]
               );
             } catch (error: any) {
               setLoading(null);
-              Alert.alert('Error', error.response?.data?.error || error.message || 'Payment failed');
+              Alert.alert('Error', error.response?.data?.error || error.message || 'Subscription setup failed');
             }
           },
         },
       ]
     );
-  };
-
-  const handleVerify = async (reference: string) => {
-    try {
-      setLoading('verify');
-      const result = await apiClient.verifyPayment(reference);
-      setLoading(null);
-      Alert.alert(
-        '🎉 Success!',
-        result.message || 'Your subscription has been upgraded!',
-        [{ text: 'Awesome!', onPress: () => navigation.goBack() }]
-      );
-    } catch (error: any) {
-      setLoading(null);
-      Alert.alert('Verification Failed', error.response?.data?.error || 'Could not verify payment. Please contact support.');
-    }
   };
 
   return (
@@ -226,17 +201,10 @@ export const SubscriptionScreen: React.FC = () => {
         })}
 
         <Text style={styles.disclaimer}>
-          Payments are processed securely by Paystack. Subscriptions renew monthly unless cancelled.
-          Contact support to cancel or downgrade.
+          Subscriptions are managed in your device app store billing settings.
+          Renewal and cancellation are controlled by your store account.
         </Text>
       </ScrollView>
-
-      {loading === 'verify' && (
-        <View style={styles.verifyOverlay}>
-          <ActivityIndicator color={COLORS.primary} size="large" />
-          <Text style={styles.verifyText}>Verifying payment…</Text>
-        </View>
-      )}
     </View>
   );
 };
@@ -293,9 +261,4 @@ const styles = StyleSheet.create({
   disclaimer: {
     fontSize: 12, color: COLORS.gray, textAlign: 'center', lineHeight: 18, marginTop: 8,
   },
-  verifyOverlay: {
-    ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  verifyText: { color: '#fff', marginTop: 12, fontSize: 15, fontWeight: '600' },
 });
