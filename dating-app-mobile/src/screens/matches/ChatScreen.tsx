@@ -14,6 +14,7 @@ import {
   markMessagesRead,
   removeMatchChat,
 } from '../../store/slices/chatSlice';
+import { unmatchMatch } from '../../store/slices/matchSlice';
 import { socketClient } from '../../services/socketClient';
 import { COLORS } from '../../constants';
 import { MainStackParamList } from '../../navigation/MainNavigator';
@@ -234,20 +235,52 @@ export const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
             {partnerTyping && <Text style={styles.typingLabel}>typing…</Text>}
           </View>
         </View>
-        {/* Report button */}
+        {/* Report + Unmatch buttons */}
         {partner && (
           <TouchableOpacity
             style={styles.reportBtn}
             onPress={() =>
-              navigation.navigate('Report', {
-                userId: partner.id,
-                userName: partner.firstName ?? 'this user',
-                matchId,
-              })
+              Alert.alert(
+                'Options',
+                '',
+                [
+                  {
+                    text: 'Report',
+                    onPress: () =>
+                      navigation.navigate('Report', {
+                        userId: partner.id,
+                        userName: partner.firstName ?? 'this user',
+                        matchId,
+                      }),
+                  },
+                  {
+                    text: 'Unmatch',
+                    style: 'destructive',
+                    onPress: () =>
+                      Alert.alert(
+                        'Unmatch',
+                        `Are you sure you want to unmatch with ${partner.firstName ?? 'this person'}? This cannot be undone.`,
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          {
+                            text: 'Unmatch',
+                            style: 'destructive',
+                            onPress: async () => {
+                              await dispatch(unmatchMatch(matchId));
+                              dispatch(removeMatchChat(matchId));
+                              navigation.goBack();
+                            },
+                          },
+                        ]
+                      ),
+                  },
+                  { text: 'Cancel', style: 'cancel' },
+                ]
+              )
             }
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={styles.reportBtnText}>🚩</Text>
+            <Text style={styles.reportBtnText}>⋯</Text>
           </TouchableOpacity>
         )}
       </LinearGradient>

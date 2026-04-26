@@ -26,6 +26,8 @@ const waitlistRoutes = require('./routes/waitlist');
 const chatRoutes = require('./routes/chat');
 const reportRoutes = require('./routes/reports');
 const adminRoutes = require('./routes/admin');
+const notificationRoutes = require('./routes/notifications');
+const adsRoutes = require('./routes/ads');
 
 const app = express();
 
@@ -34,6 +36,11 @@ app.set('trust proxy', 1);
 
 // Static landing page
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Privacy policy (clean URL)
+app.get('/privacy-policy', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/privacy-policy.html'));
+});
 
 // Middleware
 app.use(helmet({
@@ -102,6 +109,8 @@ app.use('/api/waitlist', waitlistRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/ads', adsRoutes);
 
 // 404
 app.use((req, res, next) => {

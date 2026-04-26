@@ -9,6 +9,20 @@ import { OnboardingScreen } from '../screens/onboarding/OnboardingScreen';
 import { LoadingScreen } from '../components/common/LoadingScreen';
 import { notificationService } from '../services/notificationService';
 
+const linking = {
+  prefixes: ['ovally://', 'https://ovally.app'],
+  config: {
+    screens: {
+      Auth: {
+        screens: {
+          ResetPassword: 'reset-password',
+          VerifyEmail: 'verify-email',
+        },
+      },
+    },
+  },
+};
+
 // A single root stack so NavigationContainer is NEVER remounted.
 // Switching between auth / onboarding / main is done by showing different
 // screens inside this one stack rather than swapping out NavigationContainers.
@@ -52,7 +66,7 @@ export const AppNavigator = () => {
   if (initializing) return <LoadingScreen message="Loading…" />;
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <RootStack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
         {!isAuthenticated ? (
           <RootStack.Screen name="Auth" component={AuthNavigator} />

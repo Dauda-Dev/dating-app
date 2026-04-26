@@ -43,5 +43,26 @@ module.exports = {
     } catch (err) {
       next(err);
     }
+  },
+
+  async unmatch(req, res, next) {
+    try {
+      const userId = req.userId || req.user?.userId;
+      const { id } = req.params;
+
+      const match = await MatchService.getMatchById(id);
+      if (!match) return res.status(404).json({ error: 'Match not found' });
+
+      // Only a participant can unmatch
+      if (match.user1Id !== userId && match.user2Id !== userId) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      await match.update({ status: 'broken', brokenAt: new Date(), brokenReason: 'user_unmatched' });
+
+      return res.json({ success: true });
+    } catch (err) {
+      next(err);
+    }
   }
 };

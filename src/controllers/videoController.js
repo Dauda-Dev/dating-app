@@ -1,5 +1,24 @@
 const VideoService = require('../services/VideoService');
+const db = require('../config/database');
+const NotificationDispatchService = require('../services/NotificationDispatchService');
+const crypto = require('crypto');
 const { createError } = require('../utils/helpers');
+
+function verifyDailySignature(signatureHeader, payload, secret) {
+  if (!signatureHeader || !secret) return false;
+
+  const rawSig = String(signatureHeader).trim();
+  const provided = rawSig.includes('=') ? rawSig.split('=')[1] : rawSig;
+  const computed = crypto
+    .createHmac('sha256', secret)
+    .update(JSON.stringify(payload))
+    .digest('hex');
+
+  const providedBuf = Buffer.from(provided, 'utf8');
+  const computedBuf = Buffer.from(computed, 'utf8');
+  if (providedBuf.length !== computedBuf.length) return false;
+  return crypto.timingSafeEqual(providedBuf, computedBuf);
+}
 
 module.exports = {
   async initialize(req, res, next) {
@@ -11,6 +30,23 @@ module.exports = {
       if (!matchId) throw createError('matchId required', 400);
 
       const result = await VideoService.initializeVideoSession(matchId, userId);
+
+      try {
+        const match = await db.Match.findByPk(matchId, { attributes: ['user1Id', 'user2Id'] });
+        if (match) {
+          const otherUserId = match.user1Id === userId ? match.user2Id : match.user1Id;
+          await NotificationDispatchService.sendToUser({
+            userId: otherUserId,
+            type: 'video_reminder',
+            title: 'Video call ready 📹',
+            body: 'Your match started a video session. Join now!',
+            data: { matchId, sessionId: result.sessionId },
+          });
+        }
+      } catch (notifyErr) {
+        console.warn('[videoController] video reminder notification failed:', notifyErr.message);
+      }
+
       return res.json(result);
     } catch (err) {
       next(err);
@@ -75,9 +111,16 @@ module.exports = {
       // Daily.co sends webhook events here
       const event = req.body;
 
-      // Optional: Verify webhook signature
       const signature = req.headers['x-daily-signature'];
-      // TODO: Implement signature verification if Daily.co provides signing secret
+      const signingSecret = process.env.DAILY_WEBHOOK_SIGNING_SECRET;
+
+      // Enforce signature verification only when secret is configured.
+      if (signingSecret) {
+        const valid = verifyDailySignature(signature, event, signingSecret);
+        if (!valid) {
+          return res.status(401).json({ error: 'Invalid Daily webhook signature' });
+        }
+      }
 
       // Process event
       const result = await VideoService.handleDailyWebhook(event);

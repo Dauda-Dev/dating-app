@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
-const PushNotificationService = require('./PushNotificationService');
+const NotificationDispatchService = require('./NotificationDispatchService');
 
 /**
  * Returns the list of Socket.io room names a user belongs to
@@ -134,18 +134,17 @@ function initSocketService(httpServer) {
 
           if (!recipientOnline) {
             const recipient = await db.User.findByPk(recipientId, {
-              attributes: ['pushToken', 'firstName'],
+              attributes: ['id', 'firstName'],
             });
             const sender = await db.User.findByPk(userId, { attributes: ['firstName'] });
 
-            if (recipient?.pushToken) {
-              await PushNotificationService.sendPush(
-                recipient.pushToken,
-                sender?.firstName || 'New message',
-                content.trim().slice(0, 100),
-                { type: 'new_message', matchId: String(matchId) }
-              );
-            }
+            await NotificationDispatchService.sendToUser({
+              userId: recipient?.id,
+              type: 'chat_message',
+              title: sender?.firstName || 'New message',
+              body: content.trim().slice(0, 100),
+              data: { matchId: String(matchId) },
+            });
           }
         } catch (pushErr) {
           console.warn('[socket] Push notification failed for new message:', pushErr.message);

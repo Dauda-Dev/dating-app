@@ -44,7 +44,9 @@ module.exports = {
         zodiacSign,
         personalityTraits,
         photos,
-      hotTakes
+        hotTakes,
+        gender,
+        dateOfBirth,
       } = req.body;
 
       let profile = await db.Profile.findOne({ where: { userId } });
@@ -77,6 +79,16 @@ module.exports = {
 
       await profile.update(updateData);
 
+      // Update User-level fields (gender, dateOfBirth)
+      const userUpdateData = {};
+      const VALID_GENDERS = ['man', 'woman', 'non-binary', 'other'];
+      if (gender !== undefined && VALID_GENDERS.includes(gender)) userUpdateData.gender = gender;
+      if (dateOfBirth !== undefined) userUpdateData.dateOfBirth = dateOfBirth;
+      if (Object.keys(userUpdateData).length > 0) {
+        const user = await db.User.findByPk(userId);
+        if (user) await user.update(userUpdateData);
+      }
+
       return res.json({ success: true, profile });
     } catch (err) {
       next(err);
@@ -106,6 +118,13 @@ module.exports = {
       // req.file.path is the Cloudinary secure_url when using multer-storage-cloudinary
       const photoUrl = req.file.path;
 
+      // Reject if Cloudinary's WebPurify moderation synchronously flagged the image
+      const modStatus = req.file?.moderation?.[0]?.status;
+      if (modStatus === 'rejected') {
+        await deleteFile(photoUrl);
+        throw createError('Photo was rejected by content moderation. Please upload an appropriate image.', 422);
+      }
+
       await user.update({ profilePhoto: photoUrl });
 
       return res.json({
@@ -130,6 +149,13 @@ module.exports = {
       }
 
       const photoUrl = req.file.path;
+
+      // Reject if Cloudinary's WebPurify moderation synchronously flagged the image
+      const galleryModStatus = req.file?.moderation?.[0]?.status;
+      if (galleryModStatus === 'rejected') {
+        await deleteFile(photoUrl);
+        throw createError('Photo was rejected by content moderation. Please upload an appropriate image.', 422);
+      }
 
       let profile = await db.Profile.findOne({ where: { userId } });
       if (!profile) {
@@ -242,6 +268,24 @@ module.exports = {
       });
 
       return res.json({ users });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async deleteAccount(req, res, next) {
+    try {
+      const userId = req.userId || req.user?.userId;
+      const user = await db.User.findByPk(userId);
+      if (!user) throw createError('User not found', 404);
+
+      await user.update({
+        isActive: false,
+        deactivatedAt: new Date(),
+        pushToken: null,
+      });
+
+      return res.json({ message: 'Account deleted successfully' });
     } catch (err) {
       next(err);
     }

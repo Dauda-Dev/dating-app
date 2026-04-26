@@ -8,6 +8,7 @@ import { logoutUser } from '../../store/slices/authSlice';
 import { toggleTheme } from '../../store/slices/themeSlice';
 import { useTheme } from '../../constants';
 import { notificationService } from '../../services/notificationService';
+import { apiClient } from '../../services/apiClient';
 
 export const SettingsScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -55,6 +56,28 @@ export const SettingsScreen: React.FC = () => {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Logout', style: 'destructive', onPress: () => dispatch(logoutUser()) },
     ]);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This is permanent and cannot be undone. All your matches, messages and photos will be lost.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiClient.deleteAccount();
+              dispatch(logoutUser());
+            } catch {
+              Alert.alert('Error', 'Could not delete account. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const SettingRow = ({
@@ -149,7 +172,7 @@ export const SettingsScreen: React.FC = () => {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.row, { borderBottomColor: C.isDark ? '#3A1A1A' : '#FFE5E5' }]}
-            onPress={() => Alert.alert('Delete Account', 'This action is irreversible. Contact support to delete your account.')}
+            onPress={handleDeleteAccount}
           >
             <Text style={styles.rowIcon}>🗑️</Text>
             <Text style={[styles.rowLabel, { color: C.danger }]}>Delete Account</Text>

@@ -45,6 +45,12 @@ export const API_ENDPOINTS = {
   PAYMENT_PLANS: '/payments/plans',
   PAYMENT_INITIALIZE: '/payments/initialize',
   PAYMENT_VERIFY: '/payments/verify',
+  PAYMENT_STORE_INITIALIZE: '/payments/store/initialize',
+  PAYMENT_STORE_VALIDATE: '/payments/store/validate',
+  PAYMENT_ENTITLEMENTS: '/payments/entitlements',
+  NOTIFICATION_PREFERENCES: '/notifications/preferences',
+  ADS_CONFIG: '/ads/config',
+  ADS_EVENTS: '/ads/events',
   GOOGLE_MOBILE_AUTH: '/auth/google/mobile',
 };
 

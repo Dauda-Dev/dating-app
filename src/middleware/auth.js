@@ -21,7 +21,7 @@ const authenticateJWT = async (req, res, next) => {
 
     // Check live account status (suspension / deactivation)
     const user = await db.User.findByPk(decoded.userId, {
-      attributes: ['id', 'isActive', 'isSuspended'],
+      attributes: ['id', 'isActive', 'isSuspended', 'subscriptionTier', 'role'],
     });
 
     if (!user || !user.isActive) {
@@ -31,6 +31,9 @@ const authenticateJWT = async (req, res, next) => {
     if (user.isSuspended) {
       return res.status(403).json({ error: 'Account is suspended.', suspended: true });
     }
+
+    req.userTier = user.subscriptionTier;
+    req.userRole = user.role || 'user';
 
     next();
   } catch (error) {
@@ -45,11 +48,8 @@ const authenticateJWT = async (req, res, next) => {
 
 /**
  * Require admin or moderator role
- * NOTE: 'role' column not yet in DB schema — all admin routes are blocked until
- * the column is added and req.userRole is populated in authenticateJWT.
  */
 const requireAdmin = (req, res, next) => {
-  // req.userRole is undefined until 'role' column is added to the users table
   if (!req.userRole || !['admin', 'moderator'].includes(req.userRole)) {
     return res.status(403).json({ error: 'Admin access required.' });
   }

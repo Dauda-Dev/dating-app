@@ -4,6 +4,7 @@ import {
   TouchableOpacity, Alert, Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -24,6 +25,7 @@ export const ProfileScreen: React.FC = () => {
   const C = useTheme();
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
+  const [heroPhotoIndex, setHeroPhotoIndex] = useState(0);
 
   // Only refresh from server if we don't already have user data
   useEffect(() => { if (!user) dispatch(getMe()); }, [dispatch]);
@@ -51,46 +53,77 @@ export const ProfileScreen: React.FC = () => {
 
   return (
     <ScrollView style={[styles.screen, { backgroundColor: C.background }]} contentContainerStyle={styles.content}>
-      {/* ── Hero Photo Card (Tinder-style) ──────────────────────────── */}
+      {/* ── Hero Photo Card (Tinder-style swipeable) ──────────────── */}
       <View style={[styles.heroCard, { backgroundColor: C.surfaceAlt }]}>
         {allPhotos.length > 0 ? (
-          <TouchableOpacity activeOpacity={0.92} onPress={() => openViewer(0)} style={styles.heroTouch}>
-            <Image source={{ uri: allPhotos[0] }} style={styles.heroImage} />
+          <View style={styles.heroTouch}>
+            <Image source={{ uri: allPhotos[heroPhotoIndex] }} style={styles.heroImage} />
             <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.7)']}
+              colors={['transparent', 'rgba(0,0,0,0.72)']}
               style={styles.heroGradient}
             />
-            {/* Dot indicators */}
+
+            {/* Tinder top progress bars */}
             {allPhotos.length > 1 && (
-              <View style={styles.heroDots}>
+              <View style={styles.heroBars}>
                 {allPhotos.map((_, idx) => (
-                  <View key={idx} style={[styles.heroDot, idx === 0 && styles.heroDotActive]} />
+                  <View key={idx} style={styles.heroBarTrack}>
+                    <View style={[
+                      styles.heroBarFill,
+                      idx <= heroPhotoIndex && styles.heroBarFillActive,
+                    ]} />
+                  </View>
                 ))}
               </View>
             )}
+
+            {/* Tap zones: left = prev, right = next, center = open viewer */}
+            <View style={styles.heroTapZones} pointerEvents="box-none">
+              <TouchableOpacity
+                style={styles.heroTapLeft}
+                activeOpacity={1}
+                onPress={() => setHeroPhotoIndex(i => Math.max(0, i - 1))}
+              />
+              <TouchableOpacity
+                style={styles.heroTapCenter}
+                activeOpacity={0.85}
+                onPress={() => openViewer(heroPhotoIndex)}
+              />
+              <TouchableOpacity
+                style={styles.heroTapRight}
+                activeOpacity={1}
+                onPress={() => setHeroPhotoIndex(i => Math.min(allPhotos.length - 1, i + 1))}
+              />
+            </View>
+
             {/* Name / info overlay */}
-            <View style={styles.heroInfo}>
+            <View style={styles.heroInfo} pointerEvents="none">
               <Text style={styles.heroName}>
                 {user.firstName} {user.lastName}
               </Text>
               {user.subscriptionTier && user.subscriptionTier !== 'free' && (
                 <View style={styles.heroBadge}>
+                  <Ionicons
+                    name={user.subscriptionTier === 'gold' ? 'star' : 'star-outline'}
+                    size={12}
+                    color="#fff"
+                  />
                   <Text style={styles.heroBadgeText}>
-                    {user.subscriptionTier === 'gold' ? '🥇 Gold' : '⭐ Premium'}
+                    {user.subscriptionTier === 'gold' ? ' Gold' : ' Premium'}
                   </Text>
                 </View>
               )}
               <Text style={styles.heroPhotoCount}>
-                📷 {allPhotos.length} photo{allPhotos.length !== 1 ? 's' : ''} · tap to view
+                {heroPhotoIndex + 1} / {allPhotos.length}
               </Text>
             </View>
-          </TouchableOpacity>
+          </View>
         ) : (
           <TouchableOpacity
             style={styles.heroEmpty}
             onPress={() => navigation.navigate('ProfileEdit')}
           >
-            <Text style={{ fontSize: 56 }}>📷</Text>
+            <Ionicons name="camera" size={56} color={COLORS.gray} />
             <Text style={styles.heroEmptyText}>No photos yet</Text>
             <Text style={styles.heroEmptySubtext}>Tap to add photos</Text>
           </TouchableOpacity>
@@ -101,12 +134,13 @@ export const ProfileScreen: React.FC = () => {
           style={styles.editPhotosBtn}
           onPress={() => navigation.navigate('ProfileEdit')}
         >
-          <Text style={styles.editPhotosBtnText}>✏️ Edit Photos</Text>
+          <Ionicons name="pencil" size={13} color="#fff" />
+          <Text style={styles.editPhotosBtnText}> Edit</Text>
         </TouchableOpacity>
       </View>
 
       {/* ── Photo Grid ──────────────────────────────────────────────── */}
-      {allPhotos.length > 1 && (
+      {allPhotos.length > 0 && (
         <View style={[styles.card, { backgroundColor: C.card }]}>
           <View style={styles.cardTitleRow}>
             <Text style={styles.cardTitle}>All Photos</Text>
@@ -127,7 +161,7 @@ export const ProfileScreen: React.FC = () => {
                   <View style={styles.mainBadge}><Text style={styles.mainBadgeText}>Main</Text></View>
                 )}
                 <View style={styles.photoOverlay}>
-                  <Text style={styles.photoOverlayIcon}>🔍</Text>
+                  <Ionicons name="expand-outline" size={20} color="rgba(255,255,255,0)" />
                 </View>
               </TouchableOpacity>
             ))}
@@ -140,8 +174,16 @@ export const ProfileScreen: React.FC = () => {
         <Text style={[styles.emailText, { color: C.gray }]}>{user.email}</Text>
         {user.subscriptionTier && (
           <View style={styles.tierBadge}>
+            <Ionicons
+              name={
+                user.subscriptionTier === 'gold' ? 'star' :
+                user.subscriptionTier === 'premium' ? 'star-outline' : 'person-outline'
+              }
+              size={12}
+              color={COLORS.warning}
+            />
             <Text style={styles.tierText}>
-              {user.subscriptionTier === 'gold' ? '🥇 Gold' : user.subscriptionTier === 'premium' ? '⭐ Premium' : '🆓 Free'}
+              {' '}{user.subscriptionTier === 'gold' ? 'Gold' : user.subscriptionTier === 'premium' ? 'Premium' : 'Free'}
             </Text>
           </View>
         )}
@@ -158,9 +200,9 @@ export const ProfileScreen: React.FC = () => {
       {/* Details */}
       <View style={[styles.card, { backgroundColor: C.card }]}>
         <Text style={[styles.cardTitle, { color: C.black }]}>Details</Text>
-        {profile?.occupation ? <InfoRow icon="💼" label="Occupation" value={profile.occupation} /> : null}
-        {profile?.education ? <InfoRow icon="🎓" label="Education" value={profile.education} /> : null}
-        {profile?.relationshipGoal ? <InfoRow icon="💘" label="Goal" value={profile.relationshipGoal} /> : null}
+        {profile?.occupation ? <InfoRow iconName="briefcase-outline" label="Occupation" value={profile.occupation} /> : null}
+        {profile?.education ? <InfoRow iconName="school-outline" label="Education" value={profile.education} /> : null}
+        {profile?.relationshipGoal ? <InfoRow iconName="heart-outline" label="Goal" value={profile.relationshipGoal} /> : null}
       </View>
 
       {/* Hobbies */}
@@ -190,11 +232,14 @@ export const ProfileScreen: React.FC = () => {
       {/* Hot Takes */}
       {profile?.hotTakes?.filter(Boolean).length ? (
         <View style={[styles.card, { backgroundColor: C.card }]}>
-          <Text style={[styles.cardTitle, { color: C.black }]}>🔥 My Hot Takes</Text>
+          <View style={styles.cardTitleRow}>
+            <Ionicons name="flame" size={16} color="#FFA726" style={{ marginRight: 6 }} />
+            <Text style={[styles.cardTitle, { color: C.black }]}>My Hot Takes</Text>
+          </View>
           <Text style={styles.hotTakesSubtitle}>These are shared with your match as conversation starters</Text>
           {profile.hotTakes.filter(Boolean).map((take, idx) => (
             <View key={idx} style={styles.hotTakeItem}>
-              <Text style={styles.hotTakeEmoji}>💬</Text>
+              <Ionicons name="chatbubble-outline" size={16} color="#FFA726" style={styles.hotTakeIcon} />
               <Text style={styles.hotTakeText}>{take}</Text>
             </View>
           ))}
@@ -204,17 +249,17 @@ export const ProfileScreen: React.FC = () => {
       {/* Actions */}
       <View style={styles.actions}>
         <TouchableOpacity style={[styles.actionBtn, { backgroundColor: C.card }]} onPress={() => navigation.navigate('ProfileEdit')}>
-          <Text style={styles.actionIcon}>✏️</Text>
+          <Ionicons name="create-outline" size={20} color={COLORS.primary} style={styles.actionIcon} />
           <Text style={[styles.actionText, { color: C.black }]}>Edit Profile</Text>
-          <Text style={[styles.actionChevron, { color: C.lightGray }]}>›</Text>
+          <Ionicons name="chevron-forward" size={18} color={C.lightGray} />
         </TouchableOpacity>
         <TouchableOpacity style={[styles.actionBtn, { backgroundColor: C.card }]} onPress={() => navigation.navigate('Settings')}>
-          <Text style={styles.actionIcon}>⚙️</Text>
+          <Ionicons name="settings-outline" size={20} color={COLORS.gray} style={styles.actionIcon} />
           <Text style={[styles.actionText, { color: C.black }]}>Settings</Text>
-          <Text style={[styles.actionChevron, { color: C.lightGray }]}>›</Text>
+          <Ionicons name="chevron-forward" size={18} color={C.lightGray} />
         </TouchableOpacity>
         <TouchableOpacity style={[styles.actionBtn, styles.logoutBtn, { backgroundColor: C.card, borderColor: C.border }]} onPress={handleLogout}>
-          <Text style={styles.actionIcon}>🚪</Text>
+          <Ionicons name="log-out-outline" size={20} color={COLORS.danger} style={styles.actionIcon} />
           <Text style={[styles.actionText, { color: C.danger }]}>Logout</Text>
         </TouchableOpacity>
       </View>
@@ -235,9 +280,12 @@ export const ProfileScreen: React.FC = () => {
   );
 };
 
-const InfoRow = ({ icon, label, value }: { icon: string; label: string; value: string }) => (
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+const InfoRow = ({ iconName, label, value }: { iconName: IoniconName; label: string; value: string }) => (
   <View style={styles.infoRow}>
-    <Text style={styles.infoIcon}>{icon}</Text>
+    <View style={styles.infoIconWrap}>
+      <Ionicons name={iconName} size={18} color={COLORS.gray} />
+    </View>
     <View>
       <Text style={styles.infoLabel}>{label}</Text>
       <Text style={styles.infoValue}>{value}</Text>
@@ -267,20 +315,37 @@ const styles = StyleSheet.create({
   heroGradient: {
     position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%',
   },
-  heroDots: {
+  heroBars: {
     position: 'absolute',
     top: 12,
-    alignSelf: 'center',
+    left: 12,
+    right: 12,
     flexDirection: 'row',
     gap: 4,
   },
-  heroDot: {
+  heroBarTrack: {
+    flex: 1,
     height: 3,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-    width: 24,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+    overflow: 'hidden',
   },
-  heroDotActive: { backgroundColor: '#fff', width: 32 },
+  heroBarFill: {
+    flex: 1,
+    height: 3,
+    backgroundColor: 'transparent',
+  },
+  heroBarFillActive: {
+    backgroundColor: '#fff',
+  },
+  heroTapZones: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    flexDirection: 'row',
+  },
+  heroTapLeft:   { flex: 1 },
+  heroTapCenter: { flex: 2 },
+  heroTapRight:  { flex: 1 },
   heroInfo: {
     position: 'absolute',
     bottom: 20,
@@ -298,6 +363,8 @@ const styles = StyleSheet.create({
   },
   heroBadge: {
     alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(255,107,157,0.85)',
     borderRadius: 10,
     paddingHorizontal: 10,
@@ -321,6 +388,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.52)',
     borderRadius: 14,
     paddingHorizontal: 12,
@@ -339,6 +408,8 @@ const styles = StyleSheet.create({
   },
   emailText: { fontSize: 13, color: COLORS.gray },
   tierBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FFF3E0',
     borderRadius: 12,
     paddingHorizontal: 10,
@@ -401,7 +472,7 @@ const styles = StyleSheet.create({
 
   // ── Details ────────────────────────────────────────────────────────
   infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  infoIcon: { fontSize: 20, marginRight: 12 },
+  infoIconWrap: { width: 32, alignItems: 'center', marginRight: 8 },
   infoLabel: { fontSize: 11, color: COLORS.gray },
   infoValue: { fontSize: 14, color: COLORS.darkGray, fontWeight: '500' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -415,7 +486,7 @@ const styles = StyleSheet.create({
     padding: 10, marginBottom: 8,
     borderLeftWidth: 3, borderLeftColor: '#FFA726',
   },
-  hotTakeEmoji: { fontSize: 16, marginRight: 8, marginTop: 1 },
+  hotTakeIcon: { marginRight: 8, marginTop: 1 },
   hotTakeText: { flex: 1, fontSize: 14, color: COLORS.darkGray, lineHeight: 20 },
 
   // ── Actions ────────────────────────────────────────────────────────
@@ -434,7 +505,6 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   logoutBtn: { borderWidth: 1, borderColor: COLORS.lightGray },
-  actionIcon: { fontSize: 20, marginRight: 14 },
+  actionIcon: { marginRight: 14 },
   actionText: { flex: 1, fontSize: 15, color: COLORS.black, fontWeight: '500' },
-  actionChevron: { fontSize: 20, color: COLORS.gray },
 });

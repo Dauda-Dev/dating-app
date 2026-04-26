@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Image, ScrollView,
-  TouchableOpacity, RefreshControl, ActivityIndicator,
+  TouchableOpacity, RefreshControl, ActivityIndicator, Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -18,6 +18,9 @@ import { HelpButton } from '../../components/common/HelpButton';
 import { HelpModal } from '../../components/common/HelpModal';
 
 type Nav = NativeStackNavigationProp<MainStackParamList>;
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const CARD_SIZE = (SCREEN_WIDTH - 48) / 2;  // 2 columns with 16px padding + 16px gap
 
 export const MatchesScreen: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -71,25 +74,23 @@ export const MatchesScreen: React.FC = () => {
       ? Math.floor((Date.now() - new Date(item.dateOfBirth).getTime()) / 3.156e10)
       : null;
     return (
-      <View style={[styles.msgRow, { backgroundColor: C.card }]}>
-        <View style={styles.avatarWrap}>
-          {item.profilePhoto
-            ? <Image source={{ uri: item.profilePhoto }} style={styles.msgAvatar} />
-            : <View style={[styles.msgAvatar, styles.avatarPlaceholder]}><Text style={{ fontSize: 24 }}>👤</Text></View>}
-          {item.isSuperLike && (
-            <View style={styles.superLikeBadge}>
-              <Text style={{ fontSize: 11 }}>⭐</Text>
-            </View>
-          )}
-        </View>
-        <View style={styles.msgBody}>
-          <Text style={styles.msgName}>{item.firstName} {item.lastName}{age ? `, ${age}` : ''}</Text>
+      <View style={styles.gridCard}>
+        {item.profilePhoto
+          ? <Image source={{ uri: item.profilePhoto }} style={styles.gridPhoto} blurRadius={0} />
+          : <View style={[styles.gridPhoto, styles.gridPhotoPlaceholder]}>
+              <Text style={{ fontSize: 40 }}>👤</Text>
+            </View>}
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.7)']}
+          style={styles.gridGradient}
+        >
+          <Text style={styles.gridName} numberOfLines={1}>
+            {item.firstName}{age ? `, ${age}` : ''}
+          </Text>
           {item.isSuperLike
-            ? <Text style={styles.superLikeBadgeText}>⭐ Super Liked you</Text>
-            : <Text style={styles.likedYouText}>💚 Liked you</Text>}
-          {item.subscriptionTier === 'gold' && <Text style={styles.goldBadge}>🥇 Gold</Text>}
-        </View>
-        <Text style={styles.msgArrow}>›</Text>
+            ? <Text style={styles.gridSuperLike}>⭐ Super Like</Text>
+            : <Text style={styles.gridLiked}>❤️ Liked you</Text>}
+        </LinearGradient>
       </View>
     );
   };
@@ -281,7 +282,9 @@ export const MatchesScreen: React.FC = () => {
             <FlatList
               data={likedMe}
               keyExtractor={(u) => u.id}
-              contentContainerStyle={styles.listContent}
+              numColumns={2}
+              columnWrapperStyle={styles.gridRow}
+              contentContainerStyle={styles.gridContent}
               refreshControl={<RefreshControl refreshing={likedMeLoading} onRefresh={loadLikedMe} tintColor={COLORS.primary} />}
               renderItem={renderLikedMeItem}
               ListEmptyComponent={
@@ -294,22 +297,36 @@ export const MatchesScreen: React.FC = () => {
             />
           )
         ) : (
-          <View style={styles.upgradeWrap}>
-            <Text style={styles.upgradeEmoji}>👀</Text>
-            <Text style={styles.upgradeTitle}>See Who Liked You</Text>
-            <Text style={styles.upgradeBody}>
-              Upgrade to Premium or Gold to see everyone who has liked your profile.
-            </Text>
-            <TouchableOpacity style={styles.upgradeBtn} onPress={() => navigation.navigate('Subscription')}>
-              <LinearGradient
-                colors={[COLORS.gradientStart, COLORS.gradientEnd]}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                style={styles.upgradeBtnGradient}
-              >
-                <Text style={styles.upgradeBtnText}>Upgrade to Premium ✨</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
+          <ScrollView contentContainerStyle={styles.upgradeScrollContent}>
+            {/* 6 blurred placeholder cards */}
+            <View style={styles.blurGrid}>
+              {[...Array(6)].map((_, i) => (
+                <View key={i} style={[styles.gridCard, styles.blurCard]}>
+                  <View style={[styles.gridPhoto, styles.gridPhotoPlaceholder]}>
+                    <Text style={{ fontSize: 40 }}>👤</Text>
+                  </View>
+                  <View style={styles.blurOverlay} />
+                  <View style={styles.gridGradient} />
+                </View>
+              ))}
+            </View>
+            <View style={styles.upgradeWrap}>
+              <Text style={styles.upgradeEmoji}>👀</Text>
+              <Text style={styles.upgradeTitle}>See Who Liked You</Text>
+              <Text style={styles.upgradeBody}>
+                Upgrade to Premium or Gold to see everyone who has liked your profile.
+              </Text>
+              <TouchableOpacity style={styles.upgradeBtn} onPress={() => navigation.navigate('Subscription')}>
+                <LinearGradient
+                  colors={[COLORS.gradientStart, COLORS.gradientEnd]}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={styles.upgradeBtnGradient}
+                >
+                  <Text style={styles.upgradeBtnText}>Upgrade to Premium ✨</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         )
       )}
     </View>
@@ -385,6 +402,38 @@ const styles = StyleSheet.create({
   },
   superLikeBadgeText: { fontSize: 11, color: '#7C3AED', fontWeight: '700', marginTop: 2 },
   likedYouText: { fontSize: 11, color: '#059669', fontWeight: '600', marginTop: 2 },
+
+  // ── Liked Me Grid ──
+  gridRow: { gap: 16, paddingHorizontal: 16 },
+  gridContent: { padding: 16, gap: 16, paddingBottom: 32 },
+  gridCard: {
+    width: CARD_SIZE,
+    height: CARD_SIZE * 1.3,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: COLORS.lightGray,
+  },
+  gridPhoto: { width: '100%', height: '100%', position: 'absolute' },
+  gridPhotoPlaceholder: {
+    backgroundColor: COLORS.lightGray,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  gridGradient: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    height: 80,
+    padding: 10,
+    justifyContent: 'flex-end',
+  },
+  gridName: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  gridLiked: { color: '#fff', fontSize: 11, marginTop: 2 },
+  gridSuperLike: { color: '#E9D5FF', fontSize: 11, marginTop: 2 },
+  blurGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, padding: 16 },
+  blurCard: { opacity: 0.4 },
+  blurOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+  },
+  upgradeScrollContent: { flexGrow: 1 },
 
   // List content padding
   listContent: { paddingBottom: 32 },
