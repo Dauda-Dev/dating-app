@@ -4,7 +4,7 @@ services:
     runtime: node
     region: oregon
     plan: free           # change to 'starter' or higher for production
-    buildCommand: npm install
+    buildCommand: npm install && npx sequelize-cli db:migrate
     startCommand: node src/server.js
     healthCheckPath: /health
     autoDeploy: true

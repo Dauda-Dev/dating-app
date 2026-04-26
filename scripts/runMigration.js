@@ -24,11 +24,6 @@ async function runMigrations() {
     await db.authenticate();
     console.log('✅ Database connected\n');
 
-    // Sync models if needed (creates tables if they don't exist)
-    console.log('📊 Syncing database models...');
-    await db.sequelize.sync({ alter: false });
-    console.log('✅ Database models synced\n');
-
     // Get all migration files
     if (!fs.existsSync(migrationsDir)) {
       console.log('ℹ️  No migrations directory found. Creating...');
