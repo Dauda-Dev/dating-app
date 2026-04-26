@@ -121,4 +121,6 @@ router.get('/:id', authenticateJWT, matchController.getById);
  */
 router.post('/reject', authenticateJWT, matchValidator, handleValidationErrors, matchController.reject);
 
+router.delete('/:id/unmatch', authenticateJWT, matchController.unmatch);
+
 module.exports = router;

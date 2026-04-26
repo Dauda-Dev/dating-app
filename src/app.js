@@ -37,6 +37,11 @@ app.set('trust proxy', 1);
 // Static landing page
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Privacy policy (clean URL)
+app.get('/privacy-policy', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/privacy-policy.html'));
+});
+
 // Middleware
 app.use(helmet({
   contentSecurityPolicy: {

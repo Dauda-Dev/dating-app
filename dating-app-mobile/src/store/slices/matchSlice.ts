@@ -96,6 +96,18 @@ export const rejectMatch = createAsyncThunk(
   }
 );
 
+export const unmatchMatch = createAsyncThunk(
+  'matches/unmatch',
+  async (matchId: string, { rejectWithValue }) => {
+    try {
+      await apiClient.unmatchMatch(matchId);
+      return matchId;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to unmatch');
+    }
+  }
+);
+
 export const completeDate = createAsyncThunk(
   'matches/completeDate',
   async (matchId: string, { rejectWithValue }) => {
@@ -168,6 +180,12 @@ const matchSlice = createSlice({
       })
 
       .addCase(rejectMatch.fulfilled, (state, action) => {
+        const matchId = action.payload;
+        state.matches = state.matches.filter((m) => m.id !== matchId);
+        if (state.currentMatch?.id === matchId) state.currentMatch = null;
+      })
+
+      .addCase(unmatchMatch.fulfilled, (state, action) => {
         const matchId = action.payload;
         state.matches = state.matches.filter((m) => m.id !== matchId);
         if (state.currentMatch?.id === matchId) state.currentMatch = null;

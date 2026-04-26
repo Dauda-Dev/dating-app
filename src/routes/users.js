@@ -238,4 +238,6 @@ router.get('/search', authenticateJWT, userController.searchUsers);
  */
 router.get('/:id', authenticateJWT, userController.getUserById);
 
+router.delete('/me', authenticateJWT, userController.deleteAccount);
+
 module.exports = router;

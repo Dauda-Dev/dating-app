@@ -1,7 +1,24 @@
 const VideoService = require('../services/VideoService');
 const db = require('../config/database');
 const NotificationDispatchService = require('../services/NotificationDispatchService');
+const crypto = require('crypto');
 const { createError } = require('../utils/helpers');
+
+function verifyDailySignature(signatureHeader, payload, secret) {
+  if (!signatureHeader || !secret) return false;
+
+  const rawSig = String(signatureHeader).trim();
+  const provided = rawSig.includes('=') ? rawSig.split('=')[1] : rawSig;
+  const computed = crypto
+    .createHmac('sha256', secret)
+    .update(JSON.stringify(payload))
+    .digest('hex');
+
+  const providedBuf = Buffer.from(provided, 'utf8');
+  const computedBuf = Buffer.from(computed, 'utf8');
+  if (providedBuf.length !== computedBuf.length) return false;
+  return crypto.timingSafeEqual(providedBuf, computedBuf);
+}
 
 module.exports = {
   async initialize(req, res, next) {
@@ -94,9 +111,16 @@ module.exports = {
       // Daily.co sends webhook events here
       const event = req.body;
 
-      // Optional: Verify webhook signature
       const signature = req.headers['x-daily-signature'];
-      // TODO: Implement signature verification if Daily.co provides signing secret
+      const signingSecret = process.env.DAILY_WEBHOOK_SIGNING_SECRET;
+
+      // Enforce signature verification only when secret is configured.
+      if (signingSecret) {
+        const valid = verifyDailySignature(signature, event, signingSecret);
+        if (!valid) {
+          return res.status(401).json({ error: 'Invalid Daily webhook signature' });
+        }
+      }
 
       // Process event
       const result = await VideoService.handleDailyWebhook(event);

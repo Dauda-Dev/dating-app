@@ -14,6 +14,7 @@ const profilePhotoStorage = new CloudinaryStorage({
   params: {
     folder: 'dating-app/profile-photos',
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+    moderation: 'webpurify',
     transformation: [
       { width: 800, height: 800, crop: 'fill', gravity: 'face' },
       { quality: 'auto', fetch_format: 'auto' },
@@ -27,6 +28,7 @@ const galleryPhotoStorage = new CloudinaryStorage({
   params: {
     folder: 'dating-app/gallery',
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+    moderation: 'webpurify',
     transformation: [
       { width: 1200, height: 1200, crop: 'limit' },
       { quality: 'auto', fetch_format: 'auto' },

@@ -177,6 +177,26 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: false,
       field: 'is_suspended'
     },
+    role: {
+      type: DataTypes.ENUM('user', 'admin', 'moderator'),
+      allowNull: false,
+      defaultValue: 'user',
+    },
+    suspendedUntil: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'suspended_until'
+    },
+    suspensionReason: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: 'suspension_reason'
+    },
+    deactivatedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'deactivated_at'
+    },
     timezone: {
       type: DataTypes.STRING,
       defaultValue: 'UTC'
@@ -219,6 +239,9 @@ module.exports = (sequelize, DataTypes) => {
       },
       {
         fields: ['is_active']
+      },
+      {
+        fields: ['role']
       }
     ]
   });
@@ -235,6 +258,7 @@ module.exports = (sequelize, DataTypes) => {
       gender: this.gender,
       relationshipStatus: this.relationshipStatus,
       subscriptionTier: this.subscriptionTier,
+      role: this.role,
       isEmailVerified: this.isEmailVerified,
       timezone: this.timezone,
       latitude: this.latitude,

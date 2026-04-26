@@ -199,6 +199,11 @@ class ApiClient {
     return r.data;
   }
 
+  async deleteAccount() {
+    const r = await this.client.delete('/users/me');
+    return r.data;
+  }
+
   // ── Discovery ─────────────────────────────────────────────────────────────
   async getEligibleUsers(
     limit = 10,
@@ -251,6 +256,11 @@ class ApiClient {
 
   async rejectMatch(matchId: string) {
     const r = await this.client.post(API_ENDPOINTS.REJECT_MATCH, { matchId });
+    return r.data;
+  }
+
+  async unmatchMatch(matchId: string) {
+    const r = await this.client.delete(`/matches/${matchId}/unmatch`);
     return r.data;
   }
 

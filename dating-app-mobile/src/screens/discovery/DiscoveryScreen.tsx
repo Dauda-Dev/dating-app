@@ -14,16 +14,36 @@ import {
 import { requestSteal } from '../../store/slices/stealSlice';
 import { apiClient } from '../../services/apiClient';
 import { COLORS, useTheme } from '../../constants';
+import { Ionicons } from '@expo/vector-icons';
 import { DiscoveryUser } from '../../types';
 import { TutorialOverlay } from '../../components/common/TutorialOverlay';
 import { HelpButton } from '../../components/common/HelpButton';
 import { HelpModal } from '../../components/common/HelpModal';
 import { startTutorial, loadTutorialSeen } from '../../store/slices/tutorialSlice';
 import { DiscoveryFilterSheet } from '../../components/common/DiscoveryFilterSheet';
-import { swipeAdsService } from '../../services/swipeAdsService';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const SWIPE_THRESHOLD = SCREEN_W * 0.3;
+
+type SwipeAdModule = {
+  TestIds: { BANNER: string };
+  BannerAdSize: { MEDIUM_RECTANGLE: string };
+  BannerAd: React.ComponentType<{
+    unitId: string;
+    size: string;
+    requestOptions?: Record<string, unknown>;
+  }>;
+};
+
+const AD_EVERY_N_SWIPES = 8;
+
+const swipeAdModule: SwipeAdModule | null = (() => {
+  try {
+    return require('react-native-google-mobile-ads') as SwipeAdModule;
+  } catch {
+    return null;
+  }
+})();
 
 interface QuotaInfo {
   tier: string;
@@ -45,6 +65,8 @@ export const DiscoveryScreen: React.FC = () => {
   const [isUndoing, setIsUndoing] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
+  const [showAdCard, setShowAdCard] = useState(false);
+  const swipeCountRef = useRef(0);
 
   const tier = user?.subscriptionTier || 'free';
   const isGold = tier === 'gold';
@@ -71,22 +93,13 @@ export const DiscoveryScreen: React.FC = () => {
     }
   }, [tier]);
 
-  const maybeShowSwipeAd = useCallback(async () => {
-    if (tier !== 'free') return;
-
-    const shouldShow = await swipeAdsService.shouldShowAfterSwipe();
-    if (!shouldShow) return;
-
-    try {
-      await swipeAdsService.showInterstitial();
-    } catch {
-      // non-critical — keep swiping smooth if ads fail
+  const checkAndShowAd = useCallback(() => {
+    if (tier !== 'free' || !swipeAdModule || users.length === 0) return;
+    swipeCountRef.current += 1;
+    if (swipeCountRef.current % AD_EVERY_N_SWIPES === 0) {
+      setShowAdCard(true);
     }
-  }, [tier]);
-
-  useEffect(() => {
-    void swipeAdsService.syncConfigFromBackend();
-  }, []);
+  }, [tier, users.length]);
 
   // Re-fetch every time this tab is focused so swiped users don't reappear
   useFocusEffect(
@@ -116,6 +129,23 @@ export const DiscoveryScreen: React.FC = () => {
       position.setValue({ x: gestureState.dx, y: gestureState.dy });
     },
     onPanResponderRelease: (_, gestureState) => {
+      if (showAdCard) {
+        const dist = Math.sqrt(gestureState.dx ** 2 + gestureState.dy ** 2);
+        if (dist > SWIPE_THRESHOLD) {
+          const toX = gestureState.dx >= 0 ? SCREEN_W + 100 : -(SCREEN_W + 100);
+          Animated.timing(position, {
+            toValue: { x: toX, y: gestureState.dy },
+            duration: 250,
+            useNativeDriver: true,
+          }).start(() => {
+            position.setValue({ x: 0, y: 0 });
+            setShowAdCard(false);
+          });
+        } else {
+          Animated.spring(position, { toValue: { x: 0, y: 0 }, useNativeDriver: true }).start();
+        }
+        return;
+      }
       if (gestureState.dx > SWIPE_THRESHOLD) {
         swipeRight();
       } else if (gestureState.dx < -SWIPE_THRESHOLD) {
@@ -127,6 +157,7 @@ export const DiscoveryScreen: React.FC = () => {
   });
 
   const swipeRight = () => {
+    if (showAdCard) return;
     const currentUser = users[currentIndex];
     if (!currentUser) return;
 
@@ -151,9 +182,9 @@ export const DiscoveryScreen: React.FC = () => {
       useNativeDriver: true,
     }).start(async () => {
       position.setValue({ x: 0, y: 0 });
+      checkAndShowAd();
       const result = await dispatch(likeUser(currentUser.id));
       if (likeUser.fulfilled.match(result)) {
-        void maybeShowSwipeAd();
         if (quota && !quota.unlimited && quota.remaining !== null) {
           setQuota((q) => q ? { ...q, remaining: Math.max(0, (q.remaining ?? 1) - 1), used: (q.used ?? 0) + 1 } : q);
         }
@@ -174,6 +205,7 @@ export const DiscoveryScreen: React.FC = () => {
   };
 
   const superSwipe = () => {
+    if (showAdCard) return;
     const currentUser = users[currentIndex];
     if (!currentUser) return;
 
@@ -198,9 +230,9 @@ export const DiscoveryScreen: React.FC = () => {
       useNativeDriver: true,
     }).start(async () => {
       position.setValue({ x: 0, y: 0 });
+      checkAndShowAd();
       const result = await dispatch(superLikeUser(currentUser.id));
       if (superLikeUser.fulfilled.match(result)) {
-        void maybeShowSwipeAd();
         if (quota && !quota.unlimited && quota.remaining !== null) {
           setQuota((q) => q ? { ...q, remaining: Math.max(0, (q.remaining ?? 1) - 1), used: (q.used ?? 0) + 1 } : q);
         }
@@ -227,6 +259,7 @@ export const DiscoveryScreen: React.FC = () => {
   };
 
   const swipeLeft = () => {
+    if (showAdCard) return;
     const currentUser = users[currentIndex];
     if (!currentUser) return;
     setPhotoIndex(0);
@@ -238,7 +271,7 @@ export const DiscoveryScreen: React.FC = () => {
     }).start(() => {
       position.setValue({ x: 0, y: 0 });
       dispatch(passUser(currentUser.id));
-      void maybeShowSwipeAd();
+      checkAndShowAd();
     });
   };
 
@@ -284,10 +317,10 @@ export const DiscoveryScreen: React.FC = () => {
 
   const currentUser: DiscoveryUser | undefined = users[currentIndex];
 
-  if (!currentUser) {
+  if (!currentUser && !showAdCard) {
     return (
       <View style={[styles.center, { backgroundColor: C.background }]}>
-        <Text style={styles.emptyEmoji}>🎉</Text>
+        <Ionicons name="checkmark-circle-outline" size={72} color={COLORS.primary} style={{ marginBottom: 16 }} />
         <Text style={styles.emptyTitle}>You've seen everyone!</Text>
         <Text style={styles.emptySubtitle}>Check back later for new profiles</Text>
         <TouchableOpacity onPress={() => dispatch(fetchEligibleUsers())} style={styles.refreshBtn}>
@@ -299,7 +332,6 @@ export const DiscoveryScreen: React.FC = () => {
 
   const age = currentUser.age ??
     (currentUser.dateOfBirth ? Math.floor((Date.now() - new Date(currentUser.dateOfBirth).getTime()) / 3.156e10) : null);
-
   return (
     <View style={[styles.screen, { backgroundColor: C.background }]}>
       <TutorialOverlay />
@@ -308,115 +340,151 @@ export const DiscoveryScreen: React.FC = () => {
       {/* Tinder-style header */}
       <View style={styles.headerRow}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('Settings' as any)}>
-          <Text style={styles.headerBtnIcon}>⚙️</Text>
+          <Ionicons name="settings-outline" size={24} color={COLORS.gray} />
         </TouchableOpacity>
-        <Text style={styles.screenTitle}>🔥</Text>
+        <Ionicons name="flame" size={34} color={COLORS.primary} />
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.headerBtn} onPress={() => setShowFilter(true)}>
-            <Text style={styles.headerBtnIcon}>🎚️</Text>
+            <Ionicons name="options-outline" size={24} color={COLORS.gray} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('Subscription' as any)}>
             {tier === 'gold'
-              ? <Text style={styles.headerBtnIcon}>🥇</Text>
+              ? <Ionicons name="trophy" size={22} color="#F59E0B" />
               : tier === 'premium'
-              ? <Text style={styles.headerBtnIcon}>⭐</Text>
-              : <Text style={[styles.headerBtnIcon, { color: COLORS.primary }]}>✨</Text>}
+              ? <Ionicons name="star" size={22} color="#7C3AED" />
+              : <Ionicons name="diamond-outline" size={22} color={COLORS.primary} />}
           </TouchableOpacity>
         </View>
       </View>
-      {/* Quota pill (free only) */}
-      {quota && !quota.unlimited && quota.remaining !== null && (
-        <TouchableOpacity
-          style={[styles.quotaPill, quota.remaining === 0 && styles.quotaPillEmpty]}
-          onPress={() => navigation.navigate('Subscription')}
-        >
-          <Text style={[styles.quotaPillText, quota.remaining === 0 && styles.quotaPillTextEmpty]}>
-            {quota.remaining === 0 ? '💔 0 likes left · Upgrade' : `💚 ${quota.remaining} likes left`}
-          </Text>
-        </TouchableOpacity>
+      {/* Next card (behind) — during ad shows the upcoming profile, otherwise the one after current */}}
+      {showAdCard ? (
+        currentUser && (
+          <View style={[styles.card, styles.nextCard]}>
+            <Image source={{ uri: currentUser.profilePhoto }} style={styles.cardImage} />
+          </View>
+        )
+      ) : (
+        users[currentIndex + 1] && (
+          <View style={[styles.card, styles.nextCard]}>
+            <Image source={{ uri: users[currentIndex + 1].profilePhoto }} style={styles.cardImage} />
+          </View>
+        )
       )}
 
-      {/* Next card (behind) */}
-      {users[currentIndex + 1] && (
-        <View style={[styles.card, styles.nextCard]}>
-          <Image source={{ uri: users[currentIndex + 1].profilePhoto }} style={styles.cardImage} />
-        </View>
-      )}
-
-      {/* Current card */}
+      {/* Current card — ad card when it's ad time, otherwise profile card */}
       <Animated.View style={[styles.card, cardStyle]} {...panResponder.panHandlers}>
-        {(() => {
-          const allPhotos = [
-            ...(currentUser.profilePhoto ? [currentUser.profilePhoto] : []),
-            ...(currentUser.profile?.photos || []).filter(p => p !== currentUser.profilePhoto),
-          ];
-          const displayPhoto = allPhotos[photoIndex] || null;
-          return (
-            <>
-              {displayPhoto ? (
-                <Image source={{ uri: displayPhoto }} style={styles.cardImage} />
-              ) : (
-                <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
-                  <Text style={{ fontSize: 80 }}>👤</Text>
-                </View>
-              )}
-              {/* Tap zones: left = prev, right = next */}
-              {allPhotos.length > 1 && (
+        {showAdCard ? (
+          /* ── Sponsored / Ad card (Tinder-style in-deck ad) ── */
+          <>
+            <LinearGradient
+              colors={['#1a1a2e', '#16213e', '#0f3460']}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={styles.adSponsoredBadge}>
+              <Text style={styles.adSponsoredText}>SPONSORED</Text>
+            </View>
+            <View style={styles.adContent}>
+              {BannerAdComp && adUnitId ? (
+                <BannerAdComp
+                  unitId={adUnitId}
+                  size={swipeAdModule!.BannerAdSize.MEDIUM_RECTANGLE}
+                  requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+                />
+              ) : null}
+            </View>
+            <View style={styles.adSwipeHint}>
+              <Text style={styles.adSwipeHintText}>← Swipe to skip →</Text>
+            </View>
+            <Animated.View style={[styles.nopeLabel, { opacity: nopeOpacity }]}>
+              <Text style={styles.nopeLabelText}>SKIP ⏭</Text>
+            </Animated.View>
+          </>
+        ) : (
+          /* ── Profile card ── */
+          <>
+            {(() => {
+              if (!currentUser) return null;
+              const allPhotos = [
+                ...(currentUser.profilePhoto ? [currentUser.profilePhoto] : []),
+                ...(currentUser.profile?.photos || []).filter(p => p !== currentUser.profilePhoto),
+              ];
+              const displayPhoto = allPhotos[photoIndex] || null;
+              return (
                 <>
-                  <TouchableOpacity
-                    style={styles.tapLeft}
-                    onPress={() => setPhotoIndex(i => Math.max(0, i - 1))}
-                    activeOpacity={1}
-                  />
-                  <TouchableOpacity
-                    style={styles.tapRight}
-                    onPress={() => setPhotoIndex(i => Math.min(allPhotos.length - 1, i + 1))}
-                    activeOpacity={1}
-                  />
-                  {/* Dot indicators */}
-                  <View style={styles.dotsRow}>
-                    {allPhotos.map((_, i) => (
-                      <View key={i} style={[styles.dot, i === photoIndex && styles.dotActive]} />
-                    ))}
-                  </View>
+                  {displayPhoto ? (
+                    <Image source={{ uri: displayPhoto }} style={styles.cardImage} />
+                  ) : (
+                    <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
+                      <Ionicons name="person" size={80} color={COLORS.lightGray} />
+                    </View>
+                  )}
+                  {allPhotos.length > 1 && (
+                    <>
+                      <TouchableOpacity
+                        style={styles.tapLeft}
+                        onPress={() => setPhotoIndex(i => Math.max(0, i - 1))}
+                        activeOpacity={1}
+                      />
+                      <TouchableOpacity
+                        style={styles.tapRight}
+                        onPress={() => setPhotoIndex(i => Math.min(allPhotos.length - 1, i + 1))}
+                        activeOpacity={1}
+                      />
+                      <View style={styles.dotsRow}>
+                        {allPhotos.map((_, i) => (
+                          <View key={i} style={[styles.dot, i === photoIndex && styles.dotActive]} />
+                        ))}
+                      </View>
+                    </>
+                  )}
                 </>
-              )}
-            </>
-          );
-        })()}
-
-        {/* Like / Nope overlays */}
-        <Animated.View style={[styles.likeLabel, { opacity: likeOpacity }]}>
-          <Text style={styles.likeLabelText}>LIKE 💚</Text>
-        </Animated.View>
-        <Animated.View style={[styles.nopeLabel, { opacity: nopeOpacity }]}>
-          <Text style={styles.nopeLabelText}>NOPE ❌</Text>
-        </Animated.View>
-
-        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.75)']} style={styles.cardGradient}>
-          <Text style={styles.cardName}>
-            {currentUser.firstName}{currentUser.lastName ? ` ${currentUser.lastName}` : ''}{age ? `, ${age}` : ''}
-          </Text>
-          {currentUser.location ? <Text style={styles.cardLocation}>📍 {currentUser.location}</Text> : null}
-          {currentUser.distanceKm != null && (
-            <Text style={styles.cardDistance}>
-              {currentUser.distanceKm < 1 ? '📍 Less than 1 km away' : `📍 ${currentUser.distanceKm} km away`}
-            </Text>
-          )}
-          {(currentUser.bio || currentUser.profile?.bio) ? (
-            <Text style={styles.cardBio} numberOfLines={2}>{currentUser.bio || currentUser.profile?.bio}</Text>
-          ) : null}
-          {currentUser.compatibilityScore != null && (
-            <Text style={styles.compat}>⚡ {currentUser.compatibilityScore}% match</Text>
-          )}
-        </LinearGradient>
+              );
+            })()}
+            <Animated.View style={[styles.likeLabel, { opacity: likeOpacity }]}>
+              <Text style={styles.likeLabelText}>LIKE</Text>
+            </Animated.View>
+            <Animated.View style={[styles.nopeLabel, { opacity: nopeOpacity }]}>
+              <Text style={styles.nopeLabelText}>NOPE</Text>
+            </Animated.View>
+            {currentUser && (
+              <LinearGradient colors={['transparent', 'rgba(0,0,0,0.75)']} style={styles.cardGradient}>
+                <Text style={styles.cardName}>
+                  {currentUser.firstName}{currentUser.lastName ? ` ${currentUser.lastName}` : ''}{age ? `, ${age}` : ''}
+                </Text>
+                {currentUser.location ? (
+                  <View style={styles.cardInfoRow}>
+                    <Ionicons name="location-outline" size={13} color="rgba(255,255,255,0.9)" />
+                    <Text style={styles.cardLocation}> {currentUser.location}</Text>
+                  </View>
+                ) : null}
+                {currentUser.distanceKm != null && (
+                  <View style={styles.cardInfoRow}>
+                    <Ionicons name="navigate-circle-outline" size={13} color="rgba(255,255,255,0.75)" />
+                    <Text style={styles.cardDistance}>
+                      {currentUser.distanceKm < 1 ? ' Less than 1 km away' : ` ${currentUser.distanceKm} km away`}
+                    </Text>
+                  </View>
+                )}
+                {(currentUser.bio || currentUser.profile?.bio) ? (
+                  <Text style={styles.cardBio} numberOfLines={2}>{currentUser.bio || currentUser.profile?.bio}</Text>
+                ) : null}
+                {currentUser.compatibilityScore != null && (
+                  <View style={styles.cardInfoRow}>
+                    <Ionicons name="flash-outline" size={13} color="#FFD93D" />
+                    <Text style={styles.compat}> {currentUser.compatibilityScore}% match</Text>
+                  </View>
+                )}
+              </LinearGradient>
+            )}
+          </>
+        )}
       </Animated.View>
 
       {/* Tinder-style action buttons */}
       <View style={styles.actions}>
         {/* Pass — red */}
         <TouchableOpacity style={styles.passBtn} onPress={swipeLeft} activeOpacity={0.8}>
-          <Text style={styles.passBtnText}>✕</Text>
+          <Ionicons name="close" size={30} color="#FD3C5B" />
         </TouchableOpacity>
 
         {/* Undo last swipe — small grey rewind button */}
@@ -426,17 +494,17 @@ export const DiscoveryScreen: React.FC = () => {
           activeOpacity={0.8}
           disabled={isUndoing}
         >
-          <Text style={styles.undoBtnText}>↺</Text>
+          <Ionicons name="arrow-undo" size={22} color={COLORS.gray} />
         </TouchableOpacity>
 
         {/* Super-like — cyan, flies the card upward */}
         <TouchableOpacity style={styles.superBtn} onPress={superSwipe} activeOpacity={0.8}>
-          <Text style={styles.superBtnText}>★</Text>
+          <Ionicons name="star" size={26} color="#00D8FF" />
         </TouchableOpacity>
 
         {/* Like — green */}
         <TouchableOpacity style={styles.likeBtn} onPress={swipeRight} activeOpacity={0.8}>
-          <Text style={styles.likeBtnText}>♥</Text>
+          <Ionicons name="heart" size={30} color="#01DF8B" />
         </TouchableOpacity>
 
         {/* Steal — purple, Gold only */}
@@ -446,11 +514,11 @@ export const DiscoveryScreen: React.FC = () => {
           onPress={() => {
             if (!isGold) {
               Alert.alert(
-                '⚡ Gold Feature',
+                'Gold Feature',
                 'Steal requests are exclusive to Gold members.',
                 [
                   { text: 'Not Now', style: 'cancel' },
-                  { text: 'Upgrade to Gold 🥇', onPress: () => navigation.navigate('Subscription') },
+                  { text: 'Upgrade to Gold', onPress: () => navigation.navigate('Subscription') },
                 ]
               );
               return;
@@ -458,7 +526,7 @@ export const DiscoveryScreen: React.FC = () => {
             dispatch(requestSteal({ targetUserId: currentUser.id }));
           }}
         >
-          <Text style={styles.stealBtnText}>{isGold ? '⚡' : '🔒'}</Text>
+          <Ionicons name={isGold ? 'flash' : 'lock-closed'} size={22} color={isGold ? '#A78BFA' : COLORS.lightGray} />
         </TouchableOpacity>
       </View>
 
@@ -496,15 +564,6 @@ const styles = StyleSheet.create({
   headerRight: { flexDirection: 'row', alignItems: 'center' },
   screenTitle: { fontSize: 34, fontWeight: '700', color: COLORS.primary },
 
-  // ── Quota pill ──
-  quotaPill: {
-    backgroundColor: '#ECFDF5', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5,
-    borderWidth: 1, borderColor: '#6EE7B7', alignSelf: 'center', marginBottom: 8,
-  },
-  quotaPillEmpty: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
-  quotaPillText: { fontSize: 12, fontWeight: '600', color: '#065F46' },
-  quotaPillTextEmpty: { color: '#991B1B' },
-
   // ── Loading / empty ──
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   loadingText: { marginTop: 12, color: COLORS.gray, fontSize: 15 },
@@ -533,6 +592,20 @@ const styles = StyleSheet.create({
     elevation: 8,
     backgroundColor: '#f0f0f0',
   },
+  // ── Ad card (Tinder in-deck sponsored card) ──
+  adSponsoredBadge: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  adSponsoredText: { color: 'rgba(255,255,255,0.65)', fontSize: 11, fontWeight: '600', letterSpacing: 1 },
+  adContent: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  adSwipeHint: { position: 'absolute', bottom: 28, left: 0, right: 0, alignItems: 'center' },
+  adSwipeHintText: { color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: '500' },
   nextCard: {
     top: 116,
     transform: [{ scale: 0.95 }],
@@ -563,7 +636,8 @@ const styles = StyleSheet.create({
   cardLocation: { fontSize: 14, color: 'rgba(255,255,255,0.9)', marginTop: 3, fontWeight: '500' },
   cardDistance: { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 2, fontWeight: '400' },
   cardBio: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 5, lineHeight: 20 },
-  compat: { fontSize: 13, color: '#FFD93D', marginTop: 6, fontWeight: '700' },
+  cardInfoRow: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
+  compat: { fontSize: 13, color: '#FFD93D', fontWeight: '700' },
 
   // LIKE / NOPE stamps — exactly like Tinder (rotated, thick border)
   likeLabel: {

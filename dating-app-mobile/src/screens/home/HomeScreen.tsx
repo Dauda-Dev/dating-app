@@ -11,6 +11,7 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchMatches } from '../../store/slices/matchSlice';
 import { fetchPendingSteals, fetchSentSteals } from '../../store/slices/stealSlice';
 import { COLORS, MATCH_STATUS_CONFIG, useTheme } from '../../constants';
+import { Ionicons } from '@expo/vector-icons';
 import { MainStackParamList } from '../../navigation/MainNavigator';
 import { Match } from '../../types';
 import { TutorialOverlay } from '../../components/common/TutorialOverlay';
@@ -18,18 +19,21 @@ import { HelpButton } from '../../components/common/HelpButton';
 import { HelpModal } from '../../components/common/HelpModal';
 import { startTutorial } from '../../store/slices/tutorialSlice';
 
-// ─── Tier config ─────────────────────────────────────────────────────────────
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+// ── Tier config ───────────────────────────────────────────────────
 const TIER_CONFIG = {
   free: {
     colors: ['#FF6B9D', '#C44569'] as [string, string],
-    emoji: '✨',
+    iconName: 'diamond-outline' as IoniconName,
+    iconColor: '#fff',
     title: 'Upgrade to Premium',
     body: 'Unlock Liked Me, more likes & priority visibility',
     btnText: 'See Plans',
   },
   premium: {
     colors: ['#7C3AED', '#4F46E5'] as [string, string],
-    emoji: '🥇',
+    iconName: 'trophy' as IoniconName,
+    iconColor: '#FFD700',
     title: 'Go Gold — top of the stack',
     body: 'Send steal requests & skip the queue',
     btnText: 'Upgrade to Gold',
@@ -81,7 +85,7 @@ const ActivityItem: React.FC<{
           <Image source={{ uri: partner.profilePhoto }} style={styles.activityPhoto} />
         ) : (
           <View style={[styles.activityPhoto, styles.activityPlaceholder]}>
-            <Text style={{ fontSize: 24 }}>{'👤'}</Text>
+            <Ionicons name="person" size={28} color={COLORS.lightGray} />
           </View>
         )}
         <View style={[styles.activityStatusDot, { backgroundColor: config?.color || COLORS.gray }]} />
@@ -148,18 +152,18 @@ export const HomeScreen: React.FC = () => {
   });
 
   const statsData = [
-    { num: matches.length, label: 'Matches', emoji: '💞', color: '#FF6B9D' },
+    { num: matches.length, label: 'Matches', iconName: 'heart' as IoniconName, color: '#FF6B9D' },
     {
       num: matches.filter((m) => m.status === 'video_call_completed').length,
-      label: 'Video Calls', emoji: '📹', color: '#4ECDC4',
+      label: 'Video Calls', iconName: 'videocam-outline' as IoniconName, color: '#4ECDC4',
     },
     {
       num: matches.filter((m) => m.status === 'date_accepted').length,
-      label: 'Dates', emoji: '📅', color: '#FFD93D',
+      label: 'Dates', iconName: 'calendar-outline' as IoniconName, color: '#FFD93D',
     },
     {
       num: pendingStealCount + sentRequests.filter((r) => r.status === 'pending').length,
-      label: 'Steals', emoji: '⚡', color: '#FF9500',
+      label: 'Steals', iconName: 'flash-outline' as IoniconName, color: '#FF9500',
       onPress: () => navigation.navigate('Steals' as any),
     },
   ];
@@ -195,7 +199,7 @@ export const HomeScreen: React.FC = () => {
               <Image source={{ uri: user.profilePhoto }} style={styles.headerAvatar} />
             ) : (
               <View style={styles.avatarPlaceholder}>
-                <Text style={{ fontSize: 26 }}>{'👤'}</Text>
+                <Ionicons name="person" size={26} color="rgba(255,255,255,0.7)" />
               </View>
             )}
             <View style={styles.onlineDot} />
@@ -229,17 +233,12 @@ export const HomeScreen: React.FC = () => {
             onPress={() => navigation.navigate('Steals' as any)}
             activeOpacity={0.85}
           >
-            <LinearGradient
-              colors={['#FF9500', '#FF6B00']}
-              style={styles.stealAlertGrad}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              <Text style={styles.stealAlertEmoji}>{'⚡'}</Text>
+            <LinearGradient colors={['#FF9500', '#FF6B00']} style={styles.stealAlertGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+              <Ionicons name="flash" size={20} color="#fff" />
               <Text style={styles.stealAlertText}>
                 {pendingStealCount} steal request{pendingStealCount > 1 ? 's' : ''} waiting
               </Text>
-              <Text style={styles.stealAlertArrow}>{'›'}</Text>
+              <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.85)" />
             </LinearGradient>
           </TouchableOpacity>
         )}
@@ -253,7 +252,7 @@ export const HomeScreen: React.FC = () => {
               activeOpacity={s.onPress ? 0.75 : 1}
               onPress={s.onPress}
             >
-              <Text style={styles.statEmoji}>{s.emoji}</Text>
+              <Ionicons name={s.iconName} size={20} color={s.color} style={{ marginBottom: 4 }} />
               <Text style={[styles.statNum, { color: s.color }]}>{s.num}</Text>
               <Text style={styles.statLabel}>{s.label}</Text>
             </TouchableOpacity>
@@ -262,13 +261,9 @@ export const HomeScreen: React.FC = () => {
 
         {/* ── Tier / upgrade banner ── */}
         {tier === 'gold' ? (
-          <LinearGradient
-            colors={['#F59E0B', '#D97706']}
-            style={styles.goldBanner}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          >
-            <Text style={styles.goldBannerText}>{'🥇 Gold Member'}</Text>
+          <LinearGradient colors={['#F59E0B', '#D97706']} style={styles.goldBanner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+            <Ionicons name="trophy" size={18} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.goldBannerText}>Gold Member</Text>
             <Text style={styles.goldBannerSub}>{"You're at the top of every stack"}</Text>
           </LinearGradient>
         ) : tierBannerConfig ? (
@@ -283,7 +278,7 @@ export const HomeScreen: React.FC = () => {
               end={{ x: 1, y: 0 }}
             >
               <View style={styles.upgradeBannerLeft}>
-                <Text style={styles.upgradeEmoji}>{tierBannerConfig.emoji}</Text>
+                <Ionicons name={tierBannerConfig.iconName} size={28} color={tierBannerConfig.iconColor} style={{ marginRight: 12 }} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.upgradeTitle}>{tierBannerConfig.title}</Text>
                   <Text style={styles.upgradeSub}>{tierBannerConfig.body}</Text>
@@ -309,13 +304,13 @@ export const HomeScreen: React.FC = () => {
         {recentMatches.length === 0 ? (
           <View style={styles.emptyMatchesRow}>
             <View style={styles.emptyRingPlaceholder}>
-              <Text style={{ fontSize: 30 }}>{'💘'}</Text>
+              <Ionicons name="heart-outline" size={30} color="#FF6B9D" />
             </View>
             <View style={styles.emptyRingPlaceholder}>
-              <Text style={{ fontSize: 30 }}>{'💝'}</Text>
+              <Ionicons name="heart-half-outline" size={30} color="#C44569" />
             </View>
             <View style={styles.emptyRingPlaceholder}>
-              <Text style={{ fontSize: 30 }}>{'💖'}</Text>
+              <Ionicons name="heart" size={30} color="#FF6B9D" />
             </View>
             <TouchableOpacity
               style={styles.startSwipingBtn}
@@ -372,7 +367,7 @@ export const HomeScreen: React.FC = () => {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <Text style={styles.discoverCTAEmoji}>{'🔥'}</Text>
+              <Ionicons name="flame" size={48} color="#fff" style={{ marginBottom: 12 }} />
               <Text style={styles.discoverCTATitle}>Find your match</Text>
               <Text style={styles.discoverCTASub}>Start swiping to get your first match</Text>
               <View style={styles.discoverCTABtn}>
@@ -454,9 +449,7 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     gap: 10,
   },
-  stealAlertEmoji: { fontSize: 20 },
   stealAlertText: { flex: 1, color: '#fff', fontWeight: '700', fontSize: 14 },
-  stealAlertArrow: { color: 'rgba(255,255,255,0.8)', fontSize: 22, fontWeight: '700' },
 
   // Stats
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
@@ -472,7 +465,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  statEmoji: { fontSize: 18, marginBottom: 4 },
   statNum: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
   statLabel: { fontSize: 11, color: COLORS.gray, marginTop: 3, fontWeight: '500' },
 
@@ -502,7 +494,6 @@ const styles = StyleSheet.create({
     gap: 12,
     flex: 1,
   },
-  upgradeEmoji: { fontSize: 28 },
   upgradeTitle: { fontSize: 14, fontWeight: '700', color: '#fff' },
   upgradeSub: { fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
   upgradeBtn: {
@@ -648,7 +639,6 @@ const styles = StyleSheet.create({
   // Discover CTA
   discoverCTA: { borderRadius: 20, overflow: 'hidden', marginTop: 8 },
   discoverCTAGrad: { padding: 28, alignItems: 'center' },
-  discoverCTAEmoji: { fontSize: 48, marginBottom: 12 },
   discoverCTATitle: {
     fontSize: 22,
     fontWeight: '800',

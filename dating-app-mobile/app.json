@@ -14,11 +14,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ovally.app",
+      "bundleIdentifier": "com.ovallly.app",
       "infoPlist": {
         "NSCameraUsageDescription": "Ovally needs camera access for video calls.",
         "NSMicrophoneUsageDescription": "Ovally needs microphone access for video calls.",
-        "NSPhotoLibraryUsageDescription": "Ovally needs photo library access to upload profile photos."
+        "NSPhotoLibraryUsageDescription": "Ovally needs photo library access to upload profile photos.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -28,7 +29,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.ovally.app",
+      "package": "com.ovallly.app",
       "permissions": [
         "CAMERA",
         "RECORD_AUDIO",
@@ -43,7 +44,9 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "POST_NOTIFICATIONS",
-        "VIBRATE"
+        "VIBRATE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -91,9 +94,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "bb5347f5-b2d3-4dc7-8c72-7dccfb883c82"
+        "projectId": "8cf62364-1f69-4d34-88a9-2130ff00119c"
       }
     },
-    "owner": "dauda933"
+    "owner": "dauda1995"
   }
 }

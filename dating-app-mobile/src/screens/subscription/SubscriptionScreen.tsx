@@ -1,18 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, ActivityIndicator, Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useAppSelector } from '../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { apiClient } from '../../services/apiClient';
 import { COLORS } from '../../constants';
+import { setSubscriptionTier } from '../../store/slices/authSlice';
 
+// ── Google Play / App Store product IDs ──────────────────────────────────────
+// Register these exact IDs in Google Play Console → Monetize → Subscriptions
+// and set EXPO_PUBLIC_IAP_PREMIUM_SKU / EXPO_PUBLIC_IAP_GOLD_SKU in .env
+const PRODUCT_IDS: Record<string, string> = {
+  premium: process.env.EXPO_PUBLIC_IAP_PREMIUM_SKU ?? 'premium_monthly',
+  gold:    process.env.EXPO_PUBLIC_IAP_GOLD_SKU    ?? 'gold_monthly',
+};
+// Reverse map: productId → tier
+const TIER_BY_PRODUCT: Record<string, string> = Object.fromEntries(
+  Object.entries(PRODUCT_IDS).map(([tier, pid]) => [pid, tier])
+);
+
+// ── Dynamic IAP module (absent in Expo Go, present in dev/prod builds) ───────
+let iap: typeof import('expo-iap') | null = null;
+try { iap = require('expo-iap'); } catch {}
+
+// ── Plan definitions ─────────────────────────────────────────────────────────
 const PLANS = [
   {
     tier: 'free',
     name: 'Free',
-    price: '₦0',
+    fallbackPrice: '₦0',
     period: 'forever',
     emoji: '🆓',
     color: '#6B7280',
@@ -30,7 +48,7 @@ const PLANS = [
   {
     tier: 'premium',
     name: 'Premium',
-    price: '₦2,000',
+    fallbackPrice: '₦2,000',
     period: 'per month',
     emoji: '⭐',
     color: '#7C3AED',
@@ -49,7 +67,7 @@ const PLANS = [
   {
     tier: 'gold',
     name: 'Gold',
-    price: '₦5,000',
+    fallbackPrice: '₦5,000',
     period: 'per month',
     emoji: '🥇',
     color: '#D97706',
@@ -69,49 +87,183 @@ const PLANS = [
 
 export const SubscriptionScreen: React.FC = () => {
   const navigation = useNavigation();
+  const dispatch = useAppDispatch();
   const { user } = useAppSelector((s) => s.auth);
   const [loading, setLoading] = useState<string | null>(null);
+  const [storeProducts, setStoreProducts] = useState<Record<string, any>>({});
+  const [iapReady, setIapReady] = useState(false);
+  const [loadingStore, setLoadingStore] = useState(true);
+  const purchaseListenerRef = useRef<ReturnType<typeof iap.purchaseUpdatedListener> | null>(null);
+  const errorListenerRef   = useRef<ReturnType<typeof iap.purchaseErrorListener>   | null>(null);
 
   const currentTier = user?.subscriptionTier || 'free';
 
+  // ── Determine live price label ────────────────────────────────────────────
+  const priceFor = (tier: string, fallback: string) => {
+    if (!iapReady) return fallback;
+    const pid = PRODUCT_IDS[tier];
+    if (!pid) return fallback;
+    const p = storeProducts[pid];
+    if (!p) return fallback;
+    // expo-iap returns localizedPrice on both platforms
+    return p.localizedPrice ?? p.price ?? fallback;
+  };
+
+  // ── IAP init & product fetch ──────────────────────────────────────────────
+  const initIAP = useCallback(async () => {
+    if (!iap) { setLoadingStore(false); return; }
+    try {
+      await iap.initConnection();
+      const skus = Object.values(PRODUCT_IDS);
+      const subs = await iap.getSubscriptions({ skus });
+      const map: Record<string, any> = {};
+      for (const sub of subs) { map[sub.productId] = sub; }
+      setStoreProducts(map);
+      setIapReady(true);
+    } catch (e: any) {
+      // Expected in Expo Go / dev client built without native modules.
+      // UI falls back to hardcoded prices and the backend purchase flow.
+      if (!e?.message?.includes('Cannot find native module')) {
+        console.warn('[IAP] init failed:', e);
+      }
+    } finally {
+      setLoadingStore(false);
+    }
+  }, []);
+
+  // ── Purchase listener ─────────────────────────────────────────────────────
+  const setupPurchaseListeners = useCallback(() => {
+    if (!iap) return;
+
+    purchaseListenerRef.current = iap.purchaseUpdatedListener(async (purchase) => {
+      try {
+        const receipt = purchase.transactionReceipt;
+        if (!receipt) return;
+
+        const productId = purchase.productId;
+        const tier = TIER_BY_PRODUCT[productId];
+        if (!tier) return;
+
+        const platform: 'android' | 'ios' = Platform.OS === 'ios' ? 'ios' : 'android';
+
+        // Validate with backend
+        await apiClient.validateStoreSubscriptionPurchase({
+          tier,
+          platform,
+          productId,
+          ...(platform === 'android'
+            ? { purchaseToken: (purchase as any).purchaseToken }
+            : { transactionId: purchase.transactionId, receipt }),
+        });
+
+        // Acknowledge / finish the transaction
+        await iap!.finishTransaction({ purchase, isConsumable: false });
+
+        // Update Redux + cached user
+        dispatch(setSubscriptionTier(tier as 'free' | 'premium' | 'gold'));
+        setLoading(null);
+
+        Alert.alert(
+          '🎉 Subscription Activated!',
+          `Welcome to ${tier.charAt(0).toUpperCase() + tier.slice(1)}! Your new features are now unlocked.`,
+          [{ text: 'Let\'s Go!', onPress: () => navigation.goBack() }]
+        );
+      } catch (err: any) {
+        setLoading(null);
+        console.warn('[IAP] purchase processing error:', err);
+        Alert.alert(
+          'Purchase Issue',
+          'Your payment was received but we could not activate your subscription. Please contact support with your purchase receipt.',
+        );
+      }
+    });
+
+    errorListenerRef.current = iap.purchaseErrorListener((error: any) => {
+      setLoading(null);
+      if (error?.code !== 'E_USER_CANCELLED') {
+        Alert.alert('Purchase Failed', error?.message || 'Could not complete the purchase. Please try again.');
+      }
+    });
+  }, [dispatch, navigation]);
+
+  useEffect(() => {
+    initIAP();
+    setupPurchaseListeners();
+    return () => {
+      purchaseListenerRef.current?.remove?.();
+      errorListenerRef.current?.remove?.();
+      iap?.endConnection?.().catch(() => {});
+    };
+  }, [initIAP, setupPurchaseListeners]);
+
+  // ── Handle upgrade button press ───────────────────────────────────────────
   const handleUpgrade = async (tier: string) => {
-    if (tier === currentTier) return;
+    if (tier === currentTier || loading) return;
     if (tier === 'free') {
       Alert.alert('Downgrade', 'Contact support to downgrade your plan.');
       return;
     }
 
+    const planName = tier.charAt(0).toUpperCase() + tier.slice(1);
+    const price = priceFor(tier, PLANS.find(p => p.tier === tier)?.fallbackPrice ?? '');
+
     Alert.alert(
-      `Upgrade to ${tier.charAt(0).toUpperCase() + tier.slice(1)}?`,
-      'Continue to in-app subscription checkout?',
+      `Upgrade to ${planName}?`,
+      `${price} per month · Billed through ${Platform.OS === 'ios' ? 'App Store' : 'Google Play'}. Cancel anytime in your store account settings.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Proceed',
-          onPress: async () => {
-            try {
-              setLoading(tier);
-              const platform: 'android' | 'ios' = Platform.OS === 'ios' ? 'ios' : 'android';
-              const result = await apiClient.initializeStoreSubscription(tier, platform);
-              setLoading(null);
-
-              Alert.alert(
-                '🧾 Subscription Started',
-                `Plan: ${tier.toUpperCase()}\nProduct: ${result.productId}\n\nNext step: complete purchase in native billing and submit purchase token/receipt for server validation.`,
-                [
-                  { text: 'OK', style: 'default' },
-                ]
-              );
-            } catch (error: any) {
-              setLoading(null);
-              Alert.alert('Error', error.response?.data?.error || error.message || 'Subscription setup failed');
-            }
-          },
+          text: 'Subscribe',
+          onPress: () => void startPurchase(tier),
         },
       ]
     );
   };
 
+  const startPurchase = async (tier: string) => {
+    const productId = PRODUCT_IDS[tier];
+    if (!productId) return;
+    setLoading(tier);
+
+    // If native IAP is available, go through the store
+    if (iap && iapReady) {
+      try {
+        const sub = storeProducts[productId];
+        const offerToken: string | undefined =
+          Platform.OS === 'android'
+            ? sub?.subscriptionOfferDetails?.[0]?.offerToken
+            : undefined;
+
+        await iap.requestSubscription({
+          sku: productId,
+          ...(offerToken ? { offerToken } : {}),
+        });
+        // Purchase result arrives via purchaseUpdatedListener — loading cleared there
+      } catch (err: any) {
+        setLoading(null);
+        if (err?.code !== 'E_USER_CANCELLED') {
+          Alert.alert('Error', err?.message || 'Could not start subscription.');
+        }
+      }
+      return;
+    }
+
+    // Fallback: server-side initialization (dev / Expo Go)
+    try {
+      const platform: 'android' | 'ios' = Platform.OS === 'ios' ? 'ios' : 'android';
+      await apiClient.initializeStoreSubscription(tier, platform);
+      setLoading(null);
+      Alert.alert(
+        '📱 Open Store Billing',
+        `To complete your ${tier} subscription, open ${platform === 'ios' ? 'App Store' : 'Google Play'} billing for product "${productId}".`,
+      );
+    } catch (error: any) {
+      setLoading(null);
+      Alert.alert('Error', error.response?.data?.error || error.message || 'Subscription setup failed');
+    }
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <View style={styles.screen}>
       <View style={styles.headerBar}>
@@ -125,17 +277,27 @@ export const SubscriptionScreen: React.FC = () => {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.subtitle}>Unlock more connections and features</Text>
 
-        {/* Current plan badge */}
         <View style={styles.currentBadge}>
           <Text style={styles.currentBadgeText}>
             Current plan: <Text style={{ fontWeight: '700' }}>{currentTier.charAt(0).toUpperCase() + currentTier.slice(1)}</Text>
           </Text>
         </View>
 
+        {/* Store loading indicator */}
+        {loadingStore && (
+          <View style={styles.storeLoadingRow}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+            <Text style={styles.storeLoadingText}>Loading store prices…</Text>
+          </View>
+        )}
+
         {PLANS.map((plan) => {
-          const isCurrent = plan.tier === currentTier;
-          const isUpgrade = PLANS.findIndex((p) => p.tier === plan.tier) > PLANS.findIndex((p) => p.tier === currentTier);
+          const isCurrent    = plan.tier === currentTier;
+          const planIndex    = PLANS.findIndex((p) => p.tier === plan.tier);
+          const currentIndex = PLANS.findIndex((p) => p.tier === currentTier);
+          const isUpgrade    = planIndex > currentIndex;
           const isLoadingThis = loading === plan.tier;
+          const displayPrice = priceFor(plan.tier, plan.fallbackPrice);
 
           return (
             <View
@@ -162,7 +324,8 @@ export const SubscriptionScreen: React.FC = () => {
                 <View style={styles.planTitleWrap}>
                   <Text style={[styles.planName, { color: plan.color }]}>{plan.name}</Text>
                   <Text style={styles.planPrice}>
-                    {plan.price} <Text style={styles.planPeriod}>{plan.period}</Text>
+                    {displayPrice}{' '}
+                    <Text style={styles.planPeriod}>{plan.period}</Text>
                   </Text>
                 </View>
               </View>
@@ -184,7 +347,11 @@ export const SubscriptionScreen: React.FC = () => {
 
               {!isCurrent && isUpgrade && (
                 <TouchableOpacity
-                  style={[styles.upgradeBtn, { backgroundColor: plan.color }, isLoadingThis && styles.upgradeBtnLoading]}
+                  style={[
+                    styles.upgradeBtn,
+                    { backgroundColor: plan.color },
+                    !!loading && styles.upgradeBtnLoading,
+                  ]}
                   onPress={() => handleUpgrade(plan.tier)}
                   disabled={!!loading}
                   activeOpacity={0.85}
@@ -192,7 +359,16 @@ export const SubscriptionScreen: React.FC = () => {
                   {isLoadingThis ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={styles.upgradeBtnText}>Upgrade to {plan.name}</Text>
+                    <>
+                      <Text style={styles.upgradeBtnText}>
+                        Subscribe to {plan.name}
+                      </Text>
+                      {iapReady && (
+                        <Text style={styles.upgradeBtnSub}>
+                          via {Platform.OS === 'ios' ? 'App Store' : 'Google Play'}
+                        </Text>
+                      )}
+                    </>
                   )}
                 </TouchableOpacity>
               )}
@@ -201,8 +377,9 @@ export const SubscriptionScreen: React.FC = () => {
         })}
 
         <Text style={styles.disclaimer}>
-          Subscriptions are managed in your device app store billing settings.
-          Renewal and cancellation are controlled by your store account.
+          Subscriptions auto-renew monthly. Manage or cancel anytime in your{' '}
+          {Platform.OS === 'ios' ? 'App Store' : 'Google Play'} account settings.
+          Payment is charged to your store account upon purchase confirmation.
         </Text>
       </ScrollView>
     </View>
@@ -220,6 +397,11 @@ const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '700', color: COLORS.black },
   content: { padding: 20, paddingBottom: 48 },
   subtitle: { fontSize: 15, color: COLORS.gray, textAlign: 'center', marginBottom: 12 },
+  storeLoadingRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    marginBottom: 12, gap: 8,
+  },
+  storeLoadingText: { fontSize: 13, color: COLORS.gray },
   currentBadge: {
     backgroundColor: '#EFF6FF', borderRadius: 10, paddingVertical: 8,
     paddingHorizontal: 16, alignSelf: 'center', marginBottom: 20,
@@ -258,6 +440,7 @@ const styles = StyleSheet.create({
   },
   upgradeBtnLoading: { opacity: 0.7 },
   upgradeBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  upgradeBtnSub: { color: 'rgba(255,255,255,0.75)', fontSize: 12, marginTop: 2 },
   disclaimer: {
     fontSize: 12, color: COLORS.gray, textAlign: 'center', lineHeight: 18, marginTop: 8,
   },

@@ -1,7 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../constants';
 
 // Tab screens
@@ -56,11 +56,16 @@ export type MainStackParamList = {
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
-const TabIcon = ({ label, focused }: { label: string; focused: boolean }) => {
-  const icons: Record<string, string> = {
-    Home: '🏠', Discover: '🔥', Matches: '💬', Profile: '👤',
-  };
-  return <Text style={{ fontSize: focused ? 22 : 19, opacity: focused ? 1 : 0.55 }}>{icons[label]}</Text>;
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+const TAB_ICONS: Record<string, [IoniconName, IoniconName]> = {
+  Discover: ['flame',          'flame-outline'],
+  Home:     ['heart',          'heart-outline'],
+  Matches:  ['chatbubbles',    'chatbubbles-outline'],
+  Profile:  ['person-circle',  'person-circle-outline'],
+};
+const TabIcon = ({ label, focused, color }: { label: string; focused: boolean; color: string }) => {
+  const [active, inactive] = TAB_ICONS[label] ?? ['ellipse', 'ellipse-outline'];
+  return <Ionicons name={focused ? active : inactive} size={focused ? 26 : 23} color={color} />;
 };
 
 const TabNavigator = () => {
@@ -69,7 +74,7 @@ const TabNavigator = () => {
   <Tab.Navigator
     screenOptions={({ route }) => ({
       headerShown: false,
-      tabBarIcon: ({ focused }) => <TabIcon label={route.name} focused={focused} />,
+      tabBarIcon: ({ focused, color }) => <TabIcon label={route.name} focused={focused} color={color} />,
       tabBarActiveTintColor: C.primary,
       tabBarInactiveTintColor: C.gray,
       tabBarStyle: {

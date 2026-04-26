@@ -14,6 +14,18 @@ import { COLORS, HOBBIES_OPTIONS, INTERESTS_OPTIONS } from '../../constants';
 
 const STEPS = ['Photo', 'About You', 'Hobbies', 'Interests'];
 
+const GENDER_OPTIONS = ['Man', 'Woman', 'Non-binary', 'Other'];
+const LOOKING_FOR_OPTIONS = ['Men', 'Women', 'Everyone'];
+
+function calculateAge(dob: { day: number; month: number; year: number }): number {
+  const today = new Date();
+  const birthDate = new Date(dob.year, dob.month - 1, dob.day);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age -= 1;
+  return age;
+}
+
 export const OnboardingScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const { user, isLoading } = useAppSelector((s) => s.auth);
@@ -26,6 +38,11 @@ export const OnboardingScreen: React.FC = () => {
   const [occupation, setOccupation] = useState('');
   const [selectedHobbies, setSelectedHobbies] = useState<string[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [dobDay, setDobDay] = useState('');
+  const [dobMonth, setDobMonth] = useState('');
+  const [dobYear, setDobYear] = useState('');
+  const [gender, setGender] = useState('');
+  const [lookingFor, setLookingFor] = useState('');
 
   const pickPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -55,13 +72,46 @@ export const OnboardingScreen: React.FC = () => {
   const toggleInterest = (i: string) =>
     setSelectedInterests((prev) => prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]);
 
+  const handleNext = () => {
+    if (step === 1) {
+      const day = parseInt(dobDay, 10);
+      const month = parseInt(dobMonth, 10);
+      const year = parseInt(dobYear, 10);
+      if (!dobDay || !dobMonth || !dobYear || isNaN(day) || isNaN(month) || isNaN(year)) {
+        Alert.alert('Required', 'Please enter your date of birth.');
+        return;
+      }
+      const age = calculateAge({ day, month, year });
+      if (age < 18) {
+        Alert.alert('Age requirement', 'You must be 18 or older to use Ovally.');
+        return;
+      }
+      if (!gender) {
+        Alert.alert('Required', 'Please select your gender.');
+        return;
+      }
+      if (!lookingFor) {
+        Alert.alert('Required', 'Please select who you are looking for.');
+        return;
+      }
+    }
+    setStep((s) => s + 1);
+  };
+
   const handleFinish = async () => {
+    const day = parseInt(dobDay, 10);
+    const month = parseInt(dobMonth, 10);
+    const year = parseInt(dobYear, 10);
+    const dateOfBirth = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     await dispatch(updateProfile({
       bio,
       location,
       occupation,
       hobbies: selectedHobbies,
       interests: selectedInterests,
+      gender: gender.toLowerCase(),
+      lookingFor: lookingFor.toLowerCase(),
+      dateOfBirth,
     }));
     dispatch(markOnboardingDone());
   };
@@ -91,9 +141,66 @@ export const OnboardingScreen: React.FC = () => {
         return (
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Tell us about yourself</Text>
-            <Input label="Bio" placeholder="Write a short bio…" value={bio} onChangeText={setBio} multiline numberOfLines={4} style={{ height: 100, textAlignVertical: 'top' }} />
-            <Input label="Location" placeholder="City, Country" value={location} onChangeText={setLocation} />
-            <Input label="Occupation" placeholder="What do you do?" value={occupation} onChangeText={setOccupation} />
+
+            <Text style={styles.fieldLabel}>Date of birth (must be 18+)</Text>
+            <View style={styles.dobRow}>
+              <Input
+                label="DD"
+                placeholder="DD"
+                value={dobDay}
+                onChangeText={(t) => setDobDay(t.replace(/\D/g, '').slice(0, 2))}
+                keyboardType="number-pad"
+                style={styles.dobInput}
+              />
+              <Input
+                label="MM"
+                placeholder="MM"
+                value={dobMonth}
+                onChangeText={(t) => setDobMonth(t.replace(/\D/g, '').slice(0, 2))}
+                keyboardType="number-pad"
+                style={styles.dobInput}
+              />
+              <Input
+                label="YYYY"
+                placeholder="YYYY"
+                value={dobYear}
+                onChangeText={(t) => setDobYear(t.replace(/\D/g, '').slice(0, 4))}
+                keyboardType="number-pad"
+                style={styles.dobYearInput}
+              />
+            </View>
+
+            <Text style={styles.fieldLabel}>I am a</Text>
+            <View style={styles.chips}>
+              {GENDER_OPTIONS.map((g) => (
+                <TouchableOpacity
+                  key={g}
+                  onPress={() => setGender(g)}
+                  style={[styles.chip, gender === g && styles.chipSelected]}
+                >
+                  <Text style={[styles.chipText, gender === g && styles.chipTextSelected]}>{g}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Interested in</Text>
+            <View style={styles.chips}>
+              {LOOKING_FOR_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  onPress={() => setLookingFor(opt)}
+                  style={[styles.chip, lookingFor === opt && styles.chipSelected]}
+                >
+                  <Text style={[styles.chipText, lookingFor === opt && styles.chipTextSelected]}>{opt}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={{ marginTop: 16 }}>
+              <Input label="Bio" placeholder="Write a short bio…" value={bio} onChangeText={setBio} multiline numberOfLines={4} style={{ height: 100, textAlignVertical: 'top' }} />
+              <Input label="Location" placeholder="City, Country" value={location} onChangeText={setLocation} />
+              <Input label="Occupation" placeholder="What do you do?" value={occupation} onChangeText={setOccupation} />
+            </View>
           </View>
         );
       case 2:
@@ -157,7 +264,7 @@ export const OnboardingScreen: React.FC = () => {
           )}
           <View style={{ flex: 1 }} />
           {step < STEPS.length - 1 ? (
-            <Button title="Next →" onPress={() => setStep((s) => s + 1)} style={styles.navBtn} />
+            <Button title="Next →" onPress={handleNext} style={styles.navBtn} />
           ) : (
             <Button title="Get Started 🎉" onPress={handleFinish} loading={isLoading} style={styles.navBtn} />
           )}
@@ -185,6 +292,10 @@ const styles = StyleSheet.create({
   stepContainer: { paddingBottom: 16 },
   stepTitle: { fontSize: 22, fontWeight: '700', color: COLORS.black, marginBottom: 6 },
   stepSub: { fontSize: 14, color: COLORS.gray, marginBottom: 20 },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: COLORS.darkGray, marginBottom: 8 },
+  dobRow: { flexDirection: 'row', gap: 8, marginBottom: 20 },
+  dobInput: { flex: 1 },
+  dobYearInput: { flex: 1.8 },
   photoWrap: {
     width: 180,
     height: 180,

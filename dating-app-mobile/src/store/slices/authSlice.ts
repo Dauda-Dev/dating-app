@@ -138,6 +138,12 @@ const authSlice = createSlice({
     markOnboardingDone: (state) => {
       state.needsOnboarding = false;
     },
+    setSubscriptionTier: (state, action: PayloadAction<'free' | 'premium' | 'gold'>) => {
+      if (state.user) {
+        state.user = { ...state.user, subscriptionTier: action.payload };
+        AsyncStorage.setItem('cachedUser', JSON.stringify(state.user)).catch(() => {});
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -234,5 +240,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, setNeedsOnboarding, markOnboardingDone } = authSlice.actions;
+export const { clearError, setNeedsOnboarding, markOnboardingDone, setSubscriptionTier } = authSlice.actions;
 export default authSlice.reducer;
